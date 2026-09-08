@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Väike maja rattail — Annikse Lahe Pesa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Work+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div class="bg-fixed"></div>
+
+<header>
+  <nav class="nav">
+    <a class="logo" href="/ee" style="text-decoration:none;">
+      <svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="#8a9678" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 44 L8 20 Q8 17 11 17 L15 17 Q18 17 18 20 L18 44"/>
+          <path d="M50 44 L50 30 Q50 28 52 28 L56 28 Q58 28 58 30 L58 44"/>
+          <line x1="8" y1="44" x2="58" y2="44"/>
+          <line x1="10" y1="44" x2="10" y2="50"/>
+          <line x1="56" y1="44" x2="56" y2="50"/>
+        </g>
+        <g>
+          <ellipse cx="32" cy="30" rx="12" ry="9.5" fill="#33452e" transform="rotate(-8 32 30)"/>
+          <path d="M20 28 L12 23 L20 34 Z" fill="#33452e"/>
+          <circle cx="42" cy="22" r="6.4" fill="#33452e"/>
+          <path d="M47.5 21 L55 18.5 L48.5 25.5 Z" fill="#9c5a2e"/>
+          <circle cx="43.5" cy="20" r="1.3" fill="#f6f5ee"/>
+        </g>
+      </svg>
+      <div class="logo-text">AnnikseLahe<span>PESA</span></div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/ee#majutus">Majutus</a></li>
+      <li><a href="/ee#puhkekoht">Puhkekoht</a></li>
+      <li><a href="/ee#galerii">Galerii</a></li>
+      <li><a href="/ee#asukoht">Asukoht</a></li>
+    </ul>
+    <a href="#broneeri" class="nav-cta">Broneeri</a>
+    <a href="/en" class="lang-switch">EN</a>
+  </nav>
+</header>
+
+<main class="page-shell">
+
+  <div class="subpage-header">
+    <div class="wrap">
+      <a href="/ee#majutus" class="back-link">← Kõik majutused</a>
+      <div class="eyebrow">Omaette maja</div>
+      <h1>Väike maja rattail</h1>
+    </div>
+  </div>
+
+  <section class="section" id="broneeri">
+    <div class="wrap">
+      <div class="majutus-layout">
+
+        <!-- Kirjeldus -->
+        <div>
+          <div class="majutus-foto">
+            <img src="/static/images/putka.jpg" alt="Väike maja rattail õhtuvalguses">
+          </div>
+          <div class="info-pills">
+            <span class="info-pill">Kuni 4 külalist</span>
+            <span class="info-pill">Hooaeg apr – sept</span>
+            <span class="info-pill">Voodi + elekter</span>
+            <span class="info-pill">Terrass</span>
+          </div>
+          <div class="majutus-kirjeldus">
+            <p>Omaette kodu looduse keskel — voodi, elekter ja terrass, kust vaade avaneb otse roostikule ja Annikse lahele.</p>
+            <p>Privaatne ja rahulik koht paarile või väikesele perele, kes otsib tõelist puhkust ilma hotellimürata.</p>
+          </div>
+        </div>
+
+        <!-- Broneerimisvorm -->
+        <div class="form-card">
+          <h2>Broneeri</h2>
+
+          {% if viga %}
+          <div class="form-viga">{{ viga }}</div>
+          {% endif %}
+
+          <form method="post" action="/ee/broneeri">
+            <input type="hidden" name="accommodation_id" value="1">
+
+            <div class="form-group">
+              <label>Kuupäevad</label>
+              <div class="form-dates">
+                <div>
+                  <div class="form-sublabel">Saabun</div>
+                  <input type="date" name="saabub" required
+                         min="{{ season_start }}" max="{{ season_end }}"
+                         value="{{ form_data.get('saabub', '') }}"
+                         hx-post="/api/hind" hx-trigger="change"
+                         hx-target="#hind-display" hx-include="closest form">
+                </div>
+                <div>
+                  <div class="form-sublabel">Lahkun</div>
+                  <input type="date" name="lahkub" required
+                         min="{{ season_start }}" max="{{ season_end }}"
+                         value="{{ form_data.get('lahkub', '') }}"
+                         hx-post="/api/hind" hx-trigger="change"
+                         hx-target="#hind-display" hx-include="closest form">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="guest_count">Külaliste arv</label>
+              <input type="number" id="guest_count" name="guest_count"
+                     min="1" max="4" required placeholder="1–4"
+                     value="{{ form_data.get('guest_count', '') }}">
+            </div>
+
+            <label class="form-checkbox">
+              <input type="checkbox" name="saun" value="1"
+                     {% if form_data.get('saun') == '1' %}checked{% endif %}
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+              <div class="form-checkbox-label">
+                <span>Saun</span>
+                <span>lisateenus kogu viibimise vältel{% if saun_hind_euro %} · {{ saun_hind_euro }} €{% endif %}</span>
+              </div>
+            </label>
+
+            <div id="hind-display" class="hind-display"></div>
+
+            <div class="form-divider"></div>
+
+            <div class="form-group">
+              <label for="guest_name">Nimi</label>
+              <input type="text" id="guest_name" name="guest_name" required
+                     placeholder="Eesnimi Perekonnanimi"
+                     value="{{ form_data.get('guest_name', '') }}">
+            </div>
+
+            <div class="form-group">
+              <label for="guest_email">E-post</label>
+              <input type="email" id="guest_email" name="guest_email" required
+                     placeholder="sina@näide.ee"
+                     value="{{ form_data.get('guest_email', '') }}">
+            </div>
+
+            <div class="form-group">
+              <label for="guest_phone">Telefon</label>
+              <input type="tel" id="guest_phone" name="guest_phone" required
+                     placeholder="+372 5xxx xxxx"
+                     value="{{ form_data.get('guest_phone', '') }}">
+            </div>
+
+            <button type="submit" class="btn-submit">Saada broneerimispäring →</button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo">
+          <svg class="logo-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g fill="none" stroke="#8a9678" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 44 L8 20 Q8 17 11 17 L15 17 Q18 17 18 20 L18 44"/>
+              <path d="M50 44 L50 30 Q50 28 52 28 L56 28 Q58 28 58 30 L58 44"/>
+              <line x1="8" y1="44" x2="58" y2="44"/>
+              <line x1="10" y1="44" x2="10" y2="50"/>
+              <line x1="56" y1="44" x2="56" y2="50"/>
+            </g>
+            <g>
+              <ellipse cx="32" cy="30" rx="12" ry="9.5" fill="#f6f5ee" transform="rotate(-8 32 30)"/>
+              <path d="M20 28 L12 23 L20 34 Z" fill="#f6f5ee"/>
+              <circle cx="42" cy="22" r="6.4" fill="#f6f5ee"/>
+              <path d="M47.5 21 L55 18.5 L48.5 25.5 Z" fill="#c9b98d"/>
+              <circle cx="43.5" cy="20" r="1.3" fill="#263120"/>
+            </g>
+          </svg>
+          <div class="logo-text" style="color:var(--paper);">AnnikseLahe<span style="color:var(--dune);">PESA</span></div>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Majutus</h4>
+        <ul>
+          <li><a href="/ee/majutus/vaike-maja">Ratastel maja</a></li>
+          <li><a href="#">Telkimine</a></li>
+          <li><a href="#">Karavanauto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Koht</h4>
+        <ul>
+          <li><a href="/ee#puhkekoht">Puhkekoht</a></li>
+          <li><a href="/ee#galerii">Galerii</a></li>
+          <li><a href="/ee#asukoht">Asukoht</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Kontakt</h4>
+        <ul>
+          <li>info@annikse.ee</li>
+          <li>+372 5xxx xxxx</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Annikse</span>
+      <span>Virtsu, Läänemaa</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
