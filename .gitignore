@@ -1,3 +1,10 @@
 .venv/
 __pycache__/
 *.pyc
+
+# Andmebaas — sisaldab päris andmeid, ei kuulu versioonihaldusse
+*.db
+
+# Planeerimisdokumendid ja diagrammid — ainult kohalikud
+*.md
+*.svg
