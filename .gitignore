@@ -6,5 +6,4 @@ __pycache__/
 *.db
 
 # Planeerimisdokumendid ja diagrammid — ainult kohalikud
-*.md
-*.svg
+docs/
