@@ -92,6 +92,59 @@ class BroneerimisVorm(BaseModel):
 # Abifunktsioonid
 # ---------------------------------------------------------------------------
 
+def get_saadavuse_andmed(accommodation_id: int) -> dict:
+    """Tagastab ühe majutuse saadavuse andmed kalendri ja vormi jaoks.
+
+    Tagastab:
+      season_start / season_end — YYYY-MM-DD, käesolev või järgmine hooaeg
+      max_guests — int või None
+      blocked — list[{from, to}], hõivatud vahemikud (bookings + booking_com)
+    """
+    db = get_db()
+    accom = db.execute(
+        "SELECT season_start, season_end, max_guests FROM accommodations WHERE id=?",
+        (accommodation_id,),
+    ).fetchone()
+
+    season_start = season_end = None
+    max_guests = None
+    if accom:
+        max_guests = accom["max_guests"]
+        if accom["season_start"]:
+            season_start, season_end = _hooaeg_aasta(
+                accom["season_start"], accom["season_end"]
+            )
+
+    # Hõivatud vahemikud bookings tabelist
+    bookings_rows = db.execute(
+        "SELECT start_date, end_date FROM bookings "
+        "WHERE accommodation_id=? AND status IN ('ootel','kinnitatud','makstud')",
+        (accommodation_id,),
+    ).fetchall()
+
+    # Hõivatud vahemikud Booking.com sünkroonist
+    ical_rows = db.execute(
+        "SELECT date_from, date_to FROM booking_com_blocked_dates "
+        "WHERE accommodation_id=?",
+        (accommodation_id,),
+    ).fetchall()
+
+    db.close()
+
+    blocked = [
+        {"from": r["start_date"], "to": r["end_date"]} for r in bookings_rows
+    ] + [
+        {"from": r["date_from"], "to": r["date_to"]} for r in ical_rows
+    ]
+
+    return {
+        "season_start": season_start,
+        "season_end": season_end,
+        "max_guests": max_guests,
+        "blocked": blocked,
+    }
+
+
 def _lisateenus_hind_euro(db, slug: str, today_str: str) -> Optional[int]:
     row = db.execute(
         "SELECT pr.price_per_night FROM pricing_rules pr "
