@@ -685,13 +685,19 @@
     max-width: 800px;
   }
 
-  /* Pilt vasakul (väiksem) + tekst paremal */
+  /* Vasak veerg: pilt + kalender. Parem veerg: tekst */
   .majutus-pilt-kirjeldus {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    gap: 40px;
+    grid-template-columns: 340px 1fr;
+    gap: 48px;
     align-items: start;
     margin-bottom: 40px;
+  }
+
+  .majutus-vasak {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
   }
 
   .majutus-info {
@@ -1272,10 +1278,11 @@
     }
     .btn-broneeri-header { width: 100%; text-align: center; }
 
-    /* Pilt ja tekst stack'ivad mobiilis */
+    /* Pilt+kalender ja tekst stack'ivad mobiilis */
     .majutus-pilt-kirjeldus {
       grid-template-columns: 1fr;
     }
+    .majutus-vasak { max-width: 400px; }
   }
 
   /* Mobiilis overlay on täisekraaniline */
