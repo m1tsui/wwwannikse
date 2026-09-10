@@ -682,7 +682,8 @@
 
   /* Tutvustusblokk */
   .majutus-tutvustus {
-    max-width: 800px;
+    max-width: 900px;
+    margin: 0 auto;
   }
 
   /* Vasak veerg: pilt + kalender. Parem veerg: tekst */
