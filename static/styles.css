@@ -690,6 +690,13 @@
     text-transform: uppercase;
   }
 
+  .majutus-kirjeldus h3 {
+    font-family: var(--display);
+    font-size: 18px;
+    color: var(--pine);
+    margin: 24px 0 8px;
+  }
+
   .majutus-kirjeldus p {
     color: var(--pine-dim);
     font-size: 15px;
