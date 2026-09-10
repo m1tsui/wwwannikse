@@ -312,7 +312,10 @@ async def broneeri(request: Request):
     if conflict:
         db.close()
         ctx = _vaike_maja_ctx()
-        ctx.update({"viga": "Need kuupäevad on juba broneeritud.", "form_data": dict(form)})
+        form_dict = dict(form)
+        form_dict["saabub"] = ""  # kuupäevad resetitakse, klient valib uued
+        form_dict["lahkub"] = ""
+        ctx.update({"viga": "Need kuupäevad on juba broneeritud. Palun vali teised kuupäevad.", "form_data": form_dict})
         return templates.TemplateResponse(
             request, "et/majutus/vaike-maja.html", ctx, status_code=409
         )
