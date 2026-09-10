@@ -2,12 +2,13 @@ import secrets
 import sqlite3
 from datetime import date
 from pathlib import Path
-from urllib.parse import quote
+from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, EmailStr, ValidationError, field_validator, model_validator
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -24,7 +25,6 @@ def get_db():
 
 
 def _hooaeg_aasta(mmdd_start: str, mmdd_end: str) -> tuple[str, str]:
-    """Tagastab hooaja alguse ja lõpu käesolevale (või järgmisele) aastale."""
     today = date.today()
     y = today.year
     start, end = f"{y}-{mmdd_start}", f"{y}-{mmdd_end}"
@@ -34,31 +34,98 @@ def _hooaeg_aasta(mmdd_start: str, mmdd_end: str) -> tuple[str, str]:
     return start, end
 
 
+# ---------------------------------------------------------------------------
+# Pydantic mudel broneerimisvormi valideerimiseks
+# ---------------------------------------------------------------------------
+
+class BroneerimisVorm(BaseModel):
+    accommodation_id: int = 1
+    saabub: date
+    lahkub: date
+    guest_count: Optional[int] = None
+    guest_name: str
+    guest_email: EmailStr
+    guest_phone: str
+    saun_valik: Optional[str] = None   # "ise" / "meie" / None
+    grillsysi_kogus: int = 0
+    tekk_kogus: int = 0
+
+    @model_validator(mode="after")
+    def lahkub_peab_olema_hiljem(self):
+        if self.lahkub <= self.saabub:
+            raise ValueError("Lahkumise kuupäev peab olema hiljem kui saabumise kuupäev.")
+        return self
+
+    @field_validator("guest_name", "guest_phone", mode="before")
+    @classmethod
+    def ei_tohi_olla_tyhi(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+        if not v:
+            raise ValueError("Väli on kohustuslik.")
+        return v
+
+    @field_validator("saun_valik", mode="before")
+    @classmethod
+    def normaliseri_saun(cls, v):
+        if not v or v == "":
+            return None
+        if v not in ("ise", "meie"):
+            raise ValueError("Vigane sauna valik.")
+        return v
+
+    @field_validator("grillsysi_kogus", "tekk_kogus", mode="before")
+    @classmethod
+    def kogus_mitte_negatiivne(cls, v):
+        if v is None or v == "":
+            return 0
+        try:
+            v = int(v)
+        except (ValueError, TypeError):
+            return 0
+        if v < 0:
+            raise ValueError("Kogus ei saa olla negatiivne.")
+        return v
+
+
+# ---------------------------------------------------------------------------
+# Abifunktsioonid
+# ---------------------------------------------------------------------------
+
+def _lisateenus_hind_euro(db, slug: str, today_str: str) -> Optional[int]:
+    row = db.execute(
+        "SELECT pr.price_per_night FROM pricing_rules pr "
+        "JOIN accommodations a ON a.id=pr.accommodation_id "
+        "WHERE a.slug=? AND pr.date_from<=? AND pr.date_to>=? "
+        "ORDER BY pr.date_from DESC LIMIT 1",
+        (slug, today_str, today_str),
+    ).fetchone()
+    if row:
+        return row["price_per_night"] // 100
+    return None
+
+
 def _vaike_maja_ctx() -> dict:
-    """Ehitab /ee/majutus/vaike-maja template konteksti põhiosa."""
     db = get_db()
     season_start, season_end = _hooaeg_aasta("04-01", "09-30")
     today_str = date.today().isoformat()
-    saun = db.execute("SELECT id FROM accommodations WHERE slug='saun'").fetchone()
-    saun_hind_euro = None
-    if saun:
-        rule = db.execute(
-            "SELECT price_per_night FROM pricing_rules "
-            "WHERE accommodation_id=? AND date_from<=? AND date_to>=? "
-            "ORDER BY date_from DESC LIMIT 1",
-            (saun["id"], today_str, today_str),
-        ).fetchone()
-        if rule:
-            saun_hind_euro = rule["price_per_night"] // 100
-    db.close()
-    return {
+    ctx = {
         "season_start": season_start,
         "season_end": season_end,
-        "saun_hind_euro": saun_hind_euro,
+        "saun_ise_hind_euro": _lisateenus_hind_euro(db, "saun-ise-kutan", today_str),
+        "saun_meie_hind_euro": _lisateenus_hind_euro(db, "saun-meie-kutame", today_str),
+        "grillsysi_hind_euro": _lisateenus_hind_euro(db, "grillsysi", today_str),
+        "tekk_hind_euro": _lisateenus_hind_euro(db, "tekk", today_str),
         "viga": None,
         "form_data": {},
     }
+    db.close()
+    return ctx
 
+
+# ---------------------------------------------------------------------------
+# Marsruudid
+# ---------------------------------------------------------------------------
 
 @app.get("/")
 def root(request: Request):
@@ -91,7 +158,9 @@ async def arvuta_hind(request: Request):
     form = await request.form()
     saabub_str = form.get("saabub", "").strip()
     lahkub_str = form.get("lahkub", "").strip()
-    saun = form.get("saun") == "1"
+    saun_valik = form.get("saun_valik", "").strip()
+    grillsysi_kogus = int(form.get("grillsysi_kogus", "0") or "0")
+    tekk_kogus = int(form.get("tekk_kogus", "0") or "0")
     accommodation_id = int(form.get("accommodation_id", "1"))
 
     if not saabub_str or not lahkub_str:
@@ -121,21 +190,38 @@ async def arvuta_hind(request: Request):
         return HTMLResponse('<p class="hind-puudub">Hind selgub kinnitusel.</p>')
 
     majutus_sendid = rule["price_per_night"] * oid
-    saun_sendid = 0
 
-    if saun:
-        saun_rule = db.execute(
+    def slug_hind(slug: str) -> Optional[int]:
+        r = db.execute(
             "SELECT pr.price_per_night FROM pricing_rules pr "
             "JOIN accommodations a ON a.id=pr.accommodation_id "
-            "WHERE a.slug='saun' AND pr.date_from<=? AND pr.date_to>=? "
+            "WHERE a.slug=? AND pr.date_from<=? AND pr.date_to>=? "
             "ORDER BY pr.date_from DESC LIMIT 1",
-            (saabub_str, saabub_str),
+            (slug, saabub_str, saabub_str),
         ).fetchone()
-        if saun_rule:
-            saun_sendid = saun_rule["price_per_night"]
+        return r["price_per_night"] if r else None
+
+    saun_sendid = 0
+    saun_label = None
+    if saun_valik == "ise":
+        h = slug_hind("saun-ise-kutan")
+        if h:
+            saun_sendid = h
+            saun_label = "Saun (ise kütad)"
+    elif saun_valik == "meie":
+        h = slug_hind("saun-meie-kutame")
+        if h:
+            saun_sendid = h
+            saun_label = "Saun (meie kütame)"
+
+    grillsysi_unit = slug_hind("grillsysi") if grillsysi_kogus > 0 else None
+    grillsysi_sendid = (grillsysi_unit * grillsysi_kogus) if grillsysi_unit else 0
+
+    tekk_unit = slug_hind("tekk") if tekk_kogus > 0 else None
+    tekk_sendid = (tekk_unit * tekk_kogus) if tekk_unit else 0
 
     db.close()
-    kokku = majutus_sendid + saun_sendid
+    kokku = majutus_sendid + saun_sendid + grillsysi_sendid + tekk_sendid
 
     def e(s):
         return f"{s // 100} €"
@@ -146,8 +232,12 @@ async def arvuta_hind(request: Request):
         f'<div class="hind-rida"><span>{e(rule["price_per_night"])} × {oid} {oo}</span>'
         f"<span>{e(majutus_sendid)}</span></div>"
     )
-    if saun and saun_sendid:
-        html += f'<div class="hind-rida"><span>Saun</span><span>{e(saun_sendid)}</span></div>'
+    if saun_sendid and saun_label:
+        html += f'<div class="hind-rida"><span>{saun_label}</span><span>{e(saun_sendid)}</span></div>'
+    if grillsysi_sendid:
+        html += f'<div class="hind-rida"><span>Grillsüsi × {grillsysi_kogus}</span><span>{e(grillsysi_sendid)}</span></div>'
+    if tekk_sendid:
+        html += f'<div class="hind-rida"><span>Lisatekk × {tekk_kogus}</span><span>{e(tekk_sendid)}</span></div>'
     html += f'<div class="hind-kokku"><span>Kokku</span><span>{e(kokku)}</span></div></div>'
     return HTMLResponse(html)
 
@@ -155,44 +245,39 @@ async def arvuta_hind(request: Request):
 @app.post("/ee/broneeri")
 async def broneeri(request: Request):
     form = await request.form()
-    accommodation_id = int(form.get("accommodation_id", "1"))
-    saabub_str = form.get("saabub", "").strip()
-    lahkub_str = form.get("lahkub", "").strip()
-    guest_count_str = form.get("guest_count", "").strip()
-    guest_name = form.get("guest_name", "").strip()
-    guest_email = form.get("guest_email", "").strip()
-    guest_phone = form.get("guest_phone", "").strip()
-    saun = form.get("saun") == "1"
-    guest_count = int(guest_count_str) if guest_count_str.isdigit() else None
 
-    # Valideeri sisend
-    viga = None
-    saabub = lahkub = None
-    if not saabub_str or not lahkub_str:
-        viga = "Palun vali saabumise ja lahkumise kuupäev."
-    elif not guest_name or not guest_email or not guest_phone:
-        viga = "Palun täida kõik kontaktiväljad."
-    else:
-        try:
-            saabub = date.fromisoformat(saabub_str)
-            lahkub = date.fromisoformat(lahkub_str)
-            if lahkub <= saabub:
-                viga = "Lahkumise kuupäev peab olema hiljem kui saabumise kuupäev."
-        except ValueError:
-            viga = "Vigased kuupäevad."
-
-    if viga:
+    # Pydantic valideerimine — andmete kuju ja formaadid
+    raw = {
+        "accommodation_id": form.get("accommodation_id", "1"),
+        "saabub": form.get("saabub", "").strip(),
+        "lahkub": form.get("lahkub", "").strip(),
+        "guest_count": form.get("guest_count", "").strip() or None,
+        "guest_name": form.get("guest_name", ""),
+        "guest_email": form.get("guest_email", ""),
+        "guest_phone": form.get("guest_phone", ""),
+        "saun_valik": form.get("saun_valik", ""),
+        "grillsysi_kogus": form.get("grillsysi_kogus", "0"),
+        "tekk_kogus": form.get("tekk_kogus", "0"),
+    }
+    try:
+        andmed = BroneerimisVorm.model_validate(raw)
+    except ValidationError as e:
+        esimene = e.errors()[0]
+        viga = esimene["msg"].replace("Value error, ", "")
         ctx = _vaike_maja_ctx()
         ctx.update({"viga": viga, "form_data": dict(form)})
         return templates.TemplateResponse(
             request, "et/majutus/vaike-maja.html", ctx, status_code=422
         )
 
+    saabub_str = andmed.saabub.isoformat()
+    lahkub_str = andmed.lahkub.isoformat()
+
     # DB-põhised kontrollid — hooaeg ja külaliste arv
     db = get_db()
     accom = db.execute(
         "SELECT season_start, season_end, max_guests FROM accommodations WHERE id=?",
-        (accommodation_id,),
+        (andmed.accommodation_id,),
     ).fetchone()
 
     if accom and accom["season_start"]:
@@ -206,7 +291,7 @@ async def broneeri(request: Request):
             )
 
     if accom and accom["max_guests"] is not None:
-        if guest_count is None or guest_count < 1 or guest_count > accom["max_guests"]:
+        if andmed.guest_count is None or andmed.guest_count < 1 or andmed.guest_count > accom["max_guests"]:
             db.close()
             ctx = _vaike_maja_ctx()
             ctx.update({
@@ -217,46 +302,63 @@ async def broneeri(request: Request):
                 request, "et/majutus/vaike-maja.html", ctx, status_code=422
             )
 
-    # Saadavuse kontroll (vt annikse-broneerimine.md p 4)
+    # Saadavuse kontroll
     conflict = db.execute(
         "SELECT 1 FROM bookings "
         "WHERE accommodation_id=? AND status IN ('ootel','kinnitatud','makstud') "
         "AND start_date < ? AND end_date > ?",
-        (accommodation_id, lahkub_str, saabub_str),
+        (andmed.accommodation_id, lahkub_str, saabub_str),
     ).fetchone()
     if conflict:
         db.close()
-        return RedirectResponse(
-            f"/ee/majutus/vaike-maja?viga={quote('Need kuupäevad on juba broneeritud.')}",
-            status_code=303,
+        ctx = _vaike_maja_ctx()
+        ctx.update({"viga": "Need kuupäevad on juba broneeritud.", "form_data": dict(form)})
+        return templates.TemplateResponse(
+            request, "et/majutus/vaike-maja.html", ctx, status_code=409
         )
 
-    # Arvuta koguhind
-    oid = (lahkub - saabub).days
+    # Arvuta koguhind + kogu lisateenuste info (hetketõmmis hinnast)
+    oid = (andmed.lahkub - andmed.saabub).days
     rule = db.execute(
         "SELECT price_per_night FROM pricing_rules "
         "WHERE accommodation_id=? AND date_from<=? AND date_to>=? "
         "ORDER BY date_from DESC LIMIT 1",
-        (accommodation_id, saabub_str, saabub_str),
+        (andmed.accommodation_id, saabub_str, saabub_str),
     ).fetchone()
     majutus_sendid = (rule["price_per_night"] * oid) if rule else 0
 
-    saun_id = None
-    saun_sendid = 0
-    if saun:
-        saun_row = db.execute("SELECT id FROM accommodations WHERE slug='saun'").fetchone()
-        if saun_row:
-            saun_id = saun_row["id"]
-            saun_rule = db.execute(
-                "SELECT price_per_night FROM pricing_rules "
-                "WHERE accommodation_id=? AND date_from<=? AND date_to>=? "
-                "ORDER BY date_from DESC LIMIT 1",
-                (saun_id, saabub_str, saabub_str),
-            ).fetchone()
-            if saun_rule:
-                saun_sendid = saun_rule["price_per_night"]
+    def addon_row(slug: str):
+        return db.execute(
+            "SELECT a.id, pr.price_per_night FROM pricing_rules pr "
+            "JOIN accommodations a ON a.id=pr.accommodation_id "
+            "WHERE a.slug=? AND pr.date_from<=? AND pr.date_to>=? "
+            "ORDER BY pr.date_from DESC LIMIT 1",
+            (slug, saabub_str, saabub_str),
+        ).fetchone()
 
-    total_price = majutus_sendid + saun_sendid
+    addon_kirjed = []  # (accommodation_id, quantity, unit_price)
+    kokku_lisad = 0
+
+    if andmed.saun_valik:
+        slug = "saun-ise-kutan" if andmed.saun_valik == "ise" else "saun-meie-kutame"
+        r = addon_row(slug)
+        if r:
+            addon_kirjed.append((r["id"], 1, r["price_per_night"]))
+            kokku_lisad += r["price_per_night"]
+
+    if andmed.grillsysi_kogus > 0:
+        r = addon_row("grillsysi")
+        if r:
+            addon_kirjed.append((r["id"], andmed.grillsysi_kogus, r["price_per_night"]))
+            kokku_lisad += r["price_per_night"] * andmed.grillsysi_kogus
+
+    if andmed.tekk_kogus > 0:
+        r = addon_row("tekk")
+        if r:
+            addon_kirjed.append((r["id"], andmed.tekk_kogus, r["price_per_night"]))
+            kokku_lisad += r["price_per_night"] * andmed.tekk_kogus
+
+    total_price = majutus_sendid + kokku_lisad
     token = secrets.token_urlsafe(8)
 
     cursor = db.execute(
@@ -265,14 +367,17 @@ async def broneeri(request: Request):
         " guest_name, guest_email, guest_phone, status, source, total_price, access_token) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, 'ootel', 'sait', ?, ?)",
         (
-            accommodation_id, saabub_str, lahkub_str, guest_count,
-            guest_name, guest_email, guest_phone, total_price, token,
+            andmed.accommodation_id, saabub_str, lahkub_str, andmed.guest_count,
+            andmed.guest_name, str(andmed.guest_email), andmed.guest_phone,
+            total_price, token,
         ),
     )
-    if saun and saun_id:
+    booking_id = cursor.lastrowid
+    for addon_acc_id, qty, unit in addon_kirjed:
         db.execute(
-            "INSERT INTO booking_addons (booking_id, accommodation_id) VALUES (?, ?)",
-            (cursor.lastrowid, saun_id),
+            "INSERT INTO booking_addons (booking_id, accommodation_id, quantity, unit_price) "
+            "VALUES (?, ?, ?, ?)",
+            (booking_id, addon_acc_id, qty, unit),
         )
     db.commit()
     db.close()

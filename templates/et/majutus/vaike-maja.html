@@ -117,16 +117,61 @@
                      value="{{ form_data.get('guest_count', '') }}">
             </div>
 
-            <label class="form-checkbox">
-              <input type="checkbox" name="saun" value="1"
-                     {% if form_data.get('saun') == '1' %}checked{% endif %}
-                     hx-post="/api/hind" hx-trigger="change"
-                     hx-target="#hind-display" hx-include="closest form">
-              <div class="form-checkbox-label">
-                <span>Saun</span>
-                <span>lisateenus kogu viibimise vältel{% if saun_hind_euro %} · {{ saun_hind_euro }} €{% endif %}</span>
+            <fieldset class="form-group form-lisateenused">
+              <legend>Lisateenused</legend>
+
+              <div class="lisateenus-grupp">
+                <div class="lisateenus-pealkiri">Saun (kogu viibimise vältel)</div>
+                <label class="form-radio">
+                  <input type="radio" name="saun_valik" value=""
+                         {% if not form_data.get('saun_valik') %}checked{% endif %}
+                         hx-post="/api/hind" hx-trigger="change"
+                         hx-target="#hind-display" hx-include="closest form">
+                  <span>Ei soovi sauna</span>
+                </label>
+                <label class="form-radio">
+                  <input type="radio" name="saun_valik" value="ise"
+                         {% if form_data.get('saun_valik') == 'ise' %}checked{% endif %}
+                         hx-post="/api/hind" hx-trigger="change"
+                         hx-target="#hind-display" hx-include="closest form">
+                  <div class="form-radio-label">
+                    <span>Kutan ise</span>
+                    {% if saun_ise_hind_euro is not none %}<span class="hind-märge">{{ saun_ise_hind_euro }} €</span>{% endif %}
+                  </div>
+                </label>
+                <label class="form-radio">
+                  <input type="radio" name="saun_valik" value="meie"
+                         {% if form_data.get('saun_valik') == 'meie' %}checked{% endif %}
+                         hx-post="/api/hind" hx-trigger="change"
+                         hx-target="#hind-display" hx-include="closest form">
+                  <div class="form-radio-label">
+                    <span>Teie kütate</span>
+                    {% if saun_meie_hind_euro is not none %}<span class="hind-märge">{{ saun_meie_hind_euro }} €</span>{% endif %}
+                  </div>
+                </label>
               </div>
-            </label>
+
+              <label class="form-kogus">
+                <div class="form-kogus-label">
+                  <span>Grillsüsi</span>
+                  {% if grillsysi_hind_euro is not none %}<span class="hind-märge">{{ grillsysi_hind_euro }} €/kott</span>{% endif %}
+                </div>
+                <input type="number" name="grillsysi_kogus" min="0" value="{{ form_data.get('grillsysi_kogus', '0') }}"
+                       hx-post="/api/hind" hx-trigger="change"
+                       hx-target="#hind-display" hx-include="closest form">
+              </label>
+
+              <label class="form-kogus">
+                <div class="form-kogus-label">
+                  <span>Lisatekk</span>
+                  <span class="hind-märge">tasuta</span>
+                </div>
+                <input type="number" name="tekk_kogus" min="0" value="{{ form_data.get('tekk_kogus', '0') }}"
+                       hx-post="/api/hind" hx-trigger="change"
+                       hx-target="#hind-display" hx-include="closest form">
+              </label>
+
+            </fieldset>
 
             <div id="hind-display" class="hind-display"></div>
 
