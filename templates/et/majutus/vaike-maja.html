@@ -77,6 +77,92 @@
             <h3>Saun</h3>
             <p>Sauna saab broneerida 2 tunniks. Saad valida, kas kütad ise või kütame meie — valik tehakse broneeringul.</p>
           </div>
+
+          <div class="kalender-plokk">
+            <div class="kalender-legend">
+              <span class="kal-legend-vaba">Vaba</span>
+              <span class="kal-legend-broneeritud">Broneeritud</span>
+            </div>
+            <div id="kalender"></div>
+          </div>
+
+          <script>
+          const SAADAVUS = {{ saadavus | tojson }};
+          const KUUD = ["Jaanuar","Veebruar","Märts","Aprill","Mai","Juuni","Juuli","August","September","Oktoober","November","Detsember"];
+          const NP = ["E","T","K","N","R","L","P"];
+          let calY, calM;
+
+          function ds(y, m, d) {
+            return y + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
+          }
+
+          function isBlocked(s) {
+            return SAADAVUS.blocked.some(r => s >= r.from && s < r.to);
+          }
+
+          function inSeason(s) {
+            if (!SAADAVUS.season_start) return true;
+            return s >= SAADAVUS.season_start && s <= SAADAVUS.season_end;
+          }
+
+          function renderKal() {
+            const el = document.getElementById("kalender");
+            const today = new Date().toISOString().slice(0,10);
+            const last = new Date(calY, calM+1, 0).getDate();
+            let dow = new Date(calY, calM, 1).getDay();
+            dow = dow === 0 ? 6 : dow - 1; // Mon=0
+
+            const prevM = new Date(calY, calM-1, 1);
+            const nextM = new Date(calY, calM+1, 1);
+            let prevDis = "", nextDis = "";
+            if (SAADAVUS.season_start) {
+              const ss = new Date(SAADAVUS.season_start);
+              const se = new Date(SAADAVUS.season_end);
+              if (prevM < new Date(ss.getFullYear(), ss.getMonth(), 1)) prevDis = "disabled";
+              if (nextM > new Date(se.getFullYear(), se.getMonth(), 1)) nextDis = "disabled";
+            }
+
+            let h = `<div class="kal-nav">
+              <button class="kal-nav-btn" onclick="kalNav(-1)" ${prevDis}>&#9664;</button>
+              <span class="kal-kuupealkiri">${KUUD[calM]} ${calY}</span>
+              <button class="kal-nav-btn" onclick="kalNav(1)" ${nextDis}>&#9654;</button>
+            </div><div class="kal-grid">`;
+
+            NP.forEach(p => { h += `<div class="kal-ph">${p}</div>`; });
+            for (let i=0; i<dow; i++) h += `<div class="kal-cell"></div>`;
+
+            for (let d=1; d<=last; d++) {
+              const s = ds(calY, calM, d);
+              let cls = "kal-cell ";
+              if (!inSeason(s) || s < today) cls += "kal-hall";
+              else if (isBlocked(s))         cls += "kal-broneeritud";
+              else                           cls += "kal-vaba";
+              if (s === today) cls += " kal-taana";
+              h += `<div class="${cls}">${d}</div>`;
+            }
+            h += "</div>";
+            el.innerHTML = h;
+          }
+
+          function kalNav(d) {
+            calM += d;
+            if (calM < 0)  { calM = 11; calY--; }
+            if (calM > 11) { calM = 0;  calY++; }
+            renderKal();
+          }
+
+          document.addEventListener("DOMContentLoaded", function() {
+            const today = new Date();
+            if (SAADAVUS.season_start) {
+              const ss = new Date(SAADAVUS.season_start);
+              if (today < ss) { calY = ss.getFullYear(); calM = ss.getMonth(); }
+              else            { calY = today.getFullYear(); calM = today.getMonth(); }
+            } else {
+              calY = today.getFullYear(); calM = today.getMonth();
+            }
+            renderKal();
+          });
+          </script>
         </div>
 
         <!-- Broneerimisvorm -->

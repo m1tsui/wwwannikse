@@ -842,6 +842,117 @@
   .hind-viga { font-size: 13px; color: var(--rust); }
   .hind-puudub { font-size: 13px; color: var(--pine-dim); }
 
+  /* Kalender */
+  .kalender-plokk {
+    margin: 28px 0 0;
+    max-width: 320px;
+  }
+
+  .kalender-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--pine-dim);
+    margin-bottom: 10px;
+  }
+
+  .kal-legend-vaba::before {
+    content: "";
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  .kal-legend-broneeritud::before {
+    content: "";
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    background: var(--bg-alt);
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  .kal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .kal-kuupealkiri {
+    font-family: var(--display);
+    font-size: 16px;
+    color: var(--pine);
+  }
+
+  .kal-nav-btn {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--pine-dim);
+    font-size: 12px;
+    line-height: 1;
+  }
+
+  .kal-nav-btn:hover:not([disabled]) {
+    border-color: var(--reed);
+    color: var(--pine);
+  }
+
+  .kal-nav-btn[disabled] { opacity: 0.3; cursor: default; }
+
+  .kal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+
+  .kal-ph {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--reed);
+    padding: 4px 0 6px;
+  }
+
+  .kal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border-radius: 2px;
+  }
+
+  .kal-vaba {
+    background: var(--paper);
+    color: var(--pine);
+    border: 1px solid var(--line);
+  }
+
+  .kal-broneeritud {
+    background: var(--bg-alt);
+    color: var(--reed);
+    text-decoration: line-through;
+  }
+
+  .kal-hall { color: rgba(32,42,30,0.25); }
+
+  .kal-taana {
+    outline: 2px solid var(--reed);
+    outline-offset: -2px;
+    font-weight: 600;
+  }
+
   /* Lisateenused — fieldset */
   .form-lisateenused {
     border: none;

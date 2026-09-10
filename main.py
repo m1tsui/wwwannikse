@@ -202,6 +202,7 @@ def inglise(request: Request):
 def vaike_maja(request: Request, viga: str = None):
     ctx = _vaike_maja_ctx()
     ctx["viga"] = viga
+    ctx["saadavus"] = get_saadavuse_andmed(1)
     return templates.TemplateResponse(request, "et/majutus/vaike-maja.html", ctx)
 
 
