@@ -680,9 +680,24 @@
 
   .btn-broneeri-header:hover { background: var(--pine-dim); }
 
-  /* Tutvustusblokk: täislaius, max-width loetavuse jaoks */
+  /* Tutvustusblokk */
   .majutus-tutvustus {
-    max-width: 680px;
+    max-width: 800px;
+  }
+
+  /* Pilt vasakul (väiksem) + tekst paremal */
+  .majutus-pilt-kirjeldus {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 40px;
+    align-items: start;
+    margin-bottom: 40px;
+  }
+
+  .majutus-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
 
   /* Vana grid (enam ei kasutata, jäetud ühilduvuse jaoks) */
@@ -1257,6 +1272,11 @@
       align-items: flex-start;
     }
     .btn-broneeri-header { width: 100%; text-align: center; }
+
+    /* Pilt ja tekst stack'ivad mobiilis */
+    .majutus-pilt-kirjeldus {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Mobiilis overlay on täisekraaniline */
