@@ -41,7 +41,7 @@
       <li><a href="/ee#galerii">Galerii</a></li>
       <li><a href="/ee#asukoht">Asukoht</a></li>
     </ul>
-    <a href="#broneeri" class="nav-cta">Broneeri</a>
+    <button class="nav-cta" onclick="openOverlay()">Broneeri</button>
     <a href="/en" class="lang-switch">EN</a>
   </nav>
 </header>
@@ -49,245 +49,44 @@
 <main class="page-shell">
 
   <div class="subpage-header">
-    <div class="wrap">
-      <a href="/ee#majutus" class="back-link">← Kõik majutused</a>
-      <div class="eyebrow">Omaette maja</div>
-      <h1>Väike maja rattail</h1>
+    <div class="wrap subpage-header-inner">
+      <div>
+        <a href="/ee#majutus" class="back-link">← Kõik majutused</a>
+        <div class="eyebrow">Omaette maja</div>
+        <h1>Väike maja rattail</h1>
+      </div>
+      <button class="btn-broneeri-header" onclick="openOverlay()">Broneeri →</button>
     </div>
   </div>
 
-  <section class="section" id="broneeri">
+  <section class="section">
     <div class="wrap">
-      <div class="majutus-layout">
+      <div class="majutus-tutvustus">
 
-        <!-- Kirjeldus -->
-        <div>
-          <div class="majutus-foto">
-            <img src="/static/images/putka.jpg" alt="Väike maja rattail õhtuvalguses">
-          </div>
-          <div class="info-pills">
-            <span class="info-pill">Kuni 4 külalist</span>
-            <span class="info-pill">Hooaeg apr – sept</span>
-            <span class="info-pill">Voodi + elekter</span>
-            <span class="info-pill">Terrass</span>
-          </div>
-          <div class="majutus-kirjeldus">
-            <p>Omaette kodu looduse keskel — voodi, elekter ja terrass, kust vaade avaneb otse roostikule ja Annikse lahele.</p>
-            <p>Privaatne ja rahulik koht paarile või väikesele perele, kes otsib tõelist puhkust ilma hotellimürata.</p>
-            <h3>Saun</h3>
-            <p>Sauna saab broneerida 2 tunniks. Saad valida, kas kütad ise või kütame meie — valik tehakse broneeringul.</p>
-          </div>
-
-          <div class="kalender-plokk">
-            <div class="kalender-legend">
-              <span class="kal-legend-vaba">Vaba</span>
-              <span class="kal-legend-broneeritud">Broneeritud</span>
-            </div>
-            <div id="kalender"></div>
-          </div>
-
-          <script>
-          const SAADAVUS = {{ saadavus | tojson }};
-          const KUUD = ["Jaanuar","Veebruar","Märts","Aprill","Mai","Juuni","Juuli","August","September","Oktoober","November","Detsember"];
-          const NP = ["E","T","K","N","R","L","P"];
-          let calY, calM;
-
-          function ds(y, m, d) {
-            return y + "-" + String(m+1).padStart(2,"0") + "-" + String(d).padStart(2,"0");
-          }
-
-          function isBlocked(s) {
-            return SAADAVUS.blocked.some(r => s >= r.from && s < r.to);
-          }
-
-          function inSeason(s) {
-            if (!SAADAVUS.season_start) return true;
-            return s >= SAADAVUS.season_start && s <= SAADAVUS.season_end;
-          }
-
-          function renderKal() {
-            const el = document.getElementById("kalender");
-            const today = new Date().toISOString().slice(0,10);
-            const last = new Date(calY, calM+1, 0).getDate();
-            let dow = new Date(calY, calM, 1).getDay();
-            dow = dow === 0 ? 6 : dow - 1; // Mon=0
-
-            const prevM = new Date(calY, calM-1, 1);
-            const nextM = new Date(calY, calM+1, 1);
-            let prevDis = "", nextDis = "";
-            if (SAADAVUS.season_start) {
-              const ss = new Date(SAADAVUS.season_start);
-              const se = new Date(SAADAVUS.season_end);
-              if (prevM < new Date(ss.getFullYear(), ss.getMonth(), 1)) prevDis = "disabled";
-              if (nextM > new Date(se.getFullYear(), se.getMonth(), 1)) nextDis = "disabled";
-            }
-
-            let h = `<div class="kal-nav">
-              <button class="kal-nav-btn" onclick="kalNav(-1)" ${prevDis}>&#9664;</button>
-              <span class="kal-kuupealkiri">${KUUD[calM]} ${calY}</span>
-              <button class="kal-nav-btn" onclick="kalNav(1)" ${nextDis}>&#9654;</button>
-            </div><div class="kal-grid">`;
-
-            NP.forEach(p => { h += `<div class="kal-ph">${p}</div>`; });
-            for (let i=0; i<dow; i++) h += `<div class="kal-cell"></div>`;
-
-            for (let d=1; d<=last; d++) {
-              const s = ds(calY, calM, d);
-              let cls = "kal-cell ";
-              if (!inSeason(s) || s < today) cls += "kal-hall";
-              else if (isBlocked(s))         cls += "kal-broneeritud";
-              else                           cls += "kal-vaba";
-              if (s === today) cls += " kal-taana";
-              h += `<div class="${cls}">${d}</div>`;
-            }
-            h += "</div>";
-            el.innerHTML = h;
-          }
-
-          function kalNav(d) {
-            calM += d;
-            if (calM < 0)  { calM = 11; calY--; }
-            if (calM > 11) { calM = 0;  calY++; }
-            renderKal();
-          }
-
-          document.addEventListener("DOMContentLoaded", function() {
-            const today = new Date();
-            if (SAADAVUS.season_start) {
-              const ss = new Date(SAADAVUS.season_start);
-              if (today < ss) { calY = ss.getFullYear(); calM = ss.getMonth(); }
-              else            { calY = today.getFullYear(); calM = today.getMonth(); }
-            } else {
-              calY = today.getFullYear(); calM = today.getMonth();
-            }
-            renderKal();
-          });
-          </script>
+        <div class="majutus-foto">
+          <img src="/static/images/putka.jpg" alt="Väike maja rattail õhtuvalguses">
         </div>
 
-        <!-- Broneerimisvorm -->
-        <div class="form-card">
-          <h2>Broneeri</h2>
+        <div class="info-pills">
+          <span class="info-pill">Kuni 4 külalist</span>
+          <span class="info-pill">Hooaeg apr – sept</span>
+          <span class="info-pill">Voodi + elekter</span>
+          <span class="info-pill">Terrass</span>
+        </div>
 
-          {% if viga %}
-          <div class="form-viga">{{ viga }}</div>
-          {% endif %}
+        <div class="majutus-kirjeldus">
+          <p>Omaette kodu looduse keskel — voodi, elekter ja terrass, kust vaade avaneb otse roostikule ja Annikse lahele.</p>
+          <p>Privaatne ja rahulik koht paarile või väikesele perele, kes otsib tõelist puhkust ilma hotellimürata.</p>
+          <h3>Saun</h3>
+          <p>Sauna saab broneerida 2 tunniks. Saad valida, kas kütad ise või kütame meie — valik tehakse broneeringul.</p>
+        </div>
 
-          <form method="post" action="/ee/broneeri">
-            <input type="hidden" name="accommodation_id" value="1">
-
-            <div class="form-group">
-              <label>Kuupäevad</label>
-              <div class="form-dates">
-                <div>
-                  <div class="form-sublabel">Saabun</div>
-                  <input type="date" name="saabub" required
-                         min="{{ season_start }}" max="{{ season_end }}"
-                         value="{{ form_data.get('saabub', '') }}"
-                         hx-post="/api/hind" hx-trigger="change"
-                         hx-target="#hind-display" hx-include="closest form">
-                </div>
-                <div>
-                  <div class="form-sublabel">Lahkun</div>
-                  <input type="date" name="lahkub" required
-                         min="{{ season_start }}" max="{{ season_end }}"
-                         value="{{ form_data.get('lahkub', '') }}"
-                         hx-post="/api/hind" hx-trigger="change"
-                         hx-target="#hind-display" hx-include="closest form">
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="guest_count">Külaliste arv</label>
-              <input type="number" id="guest_count" name="guest_count"
-                     min="1" max="4" required placeholder="1–4"
-                     value="{{ form_data.get('guest_count', '') }}">
-            </div>
-
-            <fieldset class="form-group form-lisateenused">
-              <legend>Lisateenused</legend>
-
-              <div class="lisateenus-grupp">
-                <div class="lisateenus-pealkiri">Saun</div>
-                <label class="form-radio">
-                  <input type="radio" name="saun_valik" value=""
-                         {% if not form_data.get('saun_valik') %}checked{% endif %}
-                         hx-post="/api/hind" hx-trigger="change"
-                         hx-target="#hind-display" hx-include="closest form">
-                  <span>Ei soovi sauna</span>
-                </label>
-                <label class="form-radio">
-                  <input type="radio" name="saun_valik" value="ise"
-                         {% if form_data.get('saun_valik') == 'ise' %}checked{% endif %}
-                         hx-post="/api/hind" hx-trigger="change"
-                         hx-target="#hind-display" hx-include="closest form">
-                  <div class="form-radio-label">
-                    <span>Kutan ise</span>
-                    {% if saun_ise_hind_euro is not none %}<span class="hind-märge">{{ saun_ise_hind_euro }} €</span>{% endif %}
-                  </div>
-                </label>
-                <label class="form-radio">
-                  <input type="radio" name="saun_valik" value="meie"
-                         {% if form_data.get('saun_valik') == 'meie' %}checked{% endif %}
-                         hx-post="/api/hind" hx-trigger="change"
-                         hx-target="#hind-display" hx-include="closest form">
-                  <div class="form-radio-label">
-                    <span>Teie kütate</span>
-                    {% if saun_meie_hind_euro is not none %}<span class="hind-märge">{{ saun_meie_hind_euro }} €</span>{% endif %}
-                  </div>
-                </label>
-              </div>
-
-              <label class="form-kogus">
-                <div class="form-kogus-label">
-                  <span>Grillsüsi</span>
-                  {% if grillsysi_hind_euro is not none %}<span class="hind-märge">{{ grillsysi_hind_euro }} €/kott</span>{% endif %}
-                </div>
-                <input type="number" name="grillsysi_kogus" min="0" value="{{ form_data.get('grillsysi_kogus', '0') }}"
-                       hx-post="/api/hind" hx-trigger="change"
-                       hx-target="#hind-display" hx-include="closest form">
-              </label>
-
-              <label class="form-kogus">
-                <div class="form-kogus-label">
-                  <span>Lisatekk</span>
-                  <span class="hind-märge">tasuta</span>
-                </div>
-                <input type="number" name="tekk_kogus" min="0" value="{{ form_data.get('tekk_kogus', '0') }}"
-                       hx-post="/api/hind" hx-trigger="change"
-                       hx-target="#hind-display" hx-include="closest form">
-              </label>
-
-            </fieldset>
-
-            <div id="hind-display" class="hind-display"></div>
-
-            <div class="form-divider"></div>
-
-            <div class="form-group">
-              <label for="guest_name">Nimi</label>
-              <input type="text" id="guest_name" name="guest_name" required
-                     placeholder="Eesnimi Perekonnanimi"
-                     value="{{ form_data.get('guest_name', '') }}">
-            </div>
-
-            <div class="form-group">
-              <label for="guest_email">E-post</label>
-              <input type="email" id="guest_email" name="guest_email" required
-                     placeholder="sina@näide.ee"
-                     value="{{ form_data.get('guest_email', '') }}">
-            </div>
-
-            <div class="form-group">
-              <label for="guest_phone">Telefon</label>
-              <input type="tel" id="guest_phone" name="guest_phone" required
-                     placeholder="+372 5xxx xxxx"
-                     value="{{ form_data.get('guest_phone', '') }}">
-            </div>
-
-            <button type="submit" class="btn-submit">Saada broneerimispäring →</button>
-          </form>
+        <div class="kalender-plokk">
+          <div class="kalender-legend">
+            <span class="kal-legend-vaba">Vaba</span>
+            <span class="kal-legend-broneeritud">Broneeritud</span>
+          </div>
+          <div id="kalender"></div>
         </div>
 
       </div>
@@ -295,6 +94,140 @@
   </section>
 
 </main>
+
+<!-- Overlay: broneerimisvorm -->
+<div id="overlay" class="overlay" role="dialog" aria-modal="true" aria-label="Broneeri">
+  <div class="overlay-taust" onclick="closeOverlay()"></div>
+  <div class="overlay-sisu" id="overlay-sisu">
+
+    <button class="overlay-sulge" onclick="closeOverlay()" aria-label="Sulge">✕</button>
+
+    <div class="form-card overlay-form-card">
+      <h2>Broneeri</h2>
+
+      {% if viga %}
+      <div class="form-viga">{{ viga }}</div>
+      {% endif %}
+
+      <form method="post" action="/ee/broneeri">
+        <input type="hidden" name="accommodation_id" value="1">
+
+        <div class="form-group">
+          <label>Kuupäevad</label>
+          <div class="form-dates">
+            <div>
+              <div class="form-sublabel">Saabun</div>
+              <input type="date" name="saabub" required
+                     min="{{ season_start }}" max="{{ season_end }}"
+                     value="{{ form_data.get('saabub', '') }}"
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+            </div>
+            <div>
+              <div class="form-sublabel">Lahkun</div>
+              <input type="date" name="lahkub" required
+                     min="{{ season_start }}" max="{{ season_end }}"
+                     value="{{ form_data.get('lahkub', '') }}"
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="guest_count">Külaliste arv</label>
+          <input type="number" id="guest_count" name="guest_count"
+                 min="1" max="4" required placeholder="1–4"
+                 value="{{ form_data.get('guest_count', '') }}">
+        </div>
+
+        <fieldset class="form-group form-lisateenused">
+          <legend>Lisateenused</legend>
+
+          <div class="lisateenus-grupp">
+            <div class="lisateenus-pealkiri">Saun</div>
+            <label class="form-radio">
+              <input type="radio" name="saun_valik" value=""
+                     {% if not form_data.get('saun_valik') %}checked{% endif %}
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+              <span>Ei soovi sauna</span>
+            </label>
+            <label class="form-radio">
+              <input type="radio" name="saun_valik" value="ise"
+                     {% if form_data.get('saun_valik') == 'ise' %}checked{% endif %}
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+              <div class="form-radio-label">
+                <span>Kutan ise</span>
+                {% if saun_ise_hind_euro is not none %}<span class="hind-märge">{{ saun_ise_hind_euro }} €</span>{% endif %}
+              </div>
+            </label>
+            <label class="form-radio">
+              <input type="radio" name="saun_valik" value="meie"
+                     {% if form_data.get('saun_valik') == 'meie' %}checked{% endif %}
+                     hx-post="/api/hind" hx-trigger="change"
+                     hx-target="#hind-display" hx-include="closest form">
+              <div class="form-radio-label">
+                <span>Teie kütate</span>
+                {% if saun_meie_hind_euro is not none %}<span class="hind-märge">{{ saun_meie_hind_euro }} €</span>{% endif %}
+              </div>
+            </label>
+          </div>
+
+          <label class="form-kogus">
+            <div class="form-kogus-label">
+              <span>Grillsüsi</span>
+              {% if grillsysi_hind_euro is not none %}<span class="hind-märge">{{ grillsysi_hind_euro }} €/kott</span>{% endif %}
+            </div>
+            <input type="number" name="grillsysi_kogus" min="0" value="{{ form_data.get('grillsysi_kogus', '0') }}"
+                   hx-post="/api/hind" hx-trigger="change"
+                   hx-target="#hind-display" hx-include="closest form">
+          </label>
+
+          <label class="form-kogus">
+            <div class="form-kogus-label">
+              <span>Lisatekk</span>
+              <span class="hind-märge">tasuta</span>
+            </div>
+            <input type="number" name="tekk_kogus" min="0" value="{{ form_data.get('tekk_kogus', '0') }}"
+                   hx-post="/api/hind" hx-trigger="change"
+                   hx-target="#hind-display" hx-include="closest form">
+          </label>
+
+        </fieldset>
+
+        <div id="hind-display" class="hind-display"></div>
+
+        <div class="form-divider"></div>
+
+        <div class="form-group">
+          <label for="guest_name">Nimi</label>
+          <input type="text" id="guest_name" name="guest_name" required
+                 placeholder="Eesnimi Perekonnanimi"
+                 value="{{ form_data.get('guest_name', '') }}">
+        </div>
+
+        <div class="form-group">
+          <label for="guest_email">E-post</label>
+          <input type="email" id="guest_email" name="guest_email" required
+                 placeholder="sina@näide.ee"
+                 value="{{ form_data.get('guest_email', '') }}">
+        </div>
+
+        <div class="form-group">
+          <label for="guest_phone">Telefon</label>
+          <input type="tel" id="guest_phone" name="guest_phone" required
+                 placeholder="+372 5xxx xxxx"
+                 value="{{ form_data.get('guest_phone', '') }}">
+        </div>
+
+        <button type="submit" class="btn-submit">Saada broneerimispäring →</button>
+      </form>
+    </div>
+
+  </div>
+</div>
 
 <footer>
   <div class="wrap">
@@ -350,6 +283,99 @@
     </div>
   </div>
 </footer>
+
+<script>
+// Kalender
+const SAADAVUS = {{ saadavus | tojson }};
+const KUUD = ["Jaanuar","Veebruar","Märts","Aprill","Mai","Juuni","Juuli","August","September","Oktoober","November","Detsember"];
+const NP = ["E","T","K","N","R","L","P"];
+let calY, calM;
+
+function ds(y,m,d){ return y+"-"+String(m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0"); }
+function isBlocked(s){ return SAADAVUS.blocked.some(r => s>=r.from && s<r.to); }
+function inSeason(s){
+  if(!SAADAVUS.season_start) return true;
+  return s>=SAADAVUS.season_start && s<=SAADAVUS.season_end;
+}
+
+function renderKal(){
+  const el = document.getElementById("kalender");
+  const today = new Date().toISOString().slice(0,10);
+  const last = new Date(calY,calM+1,0).getDate();
+  let dow = new Date(calY,calM,1).getDay();
+  dow = dow===0 ? 6 : dow-1;
+
+  const prevM = new Date(calY,calM-1,1), nextM = new Date(calY,calM+1,1);
+  let prevDis="", nextDis="";
+  if(SAADAVUS.season_start){
+    const ss=new Date(SAADAVUS.season_start), se=new Date(SAADAVUS.season_end);
+    if(prevM < new Date(ss.getFullYear(),ss.getMonth(),1)) prevDis="disabled";
+    if(nextM > new Date(se.getFullYear(),se.getMonth(),1)) nextDis="disabled";
+  }
+
+  let h=`<div class="kal-nav">
+    <button class="kal-nav-btn" onclick="kalNav(-1)" ${prevDis}>&#9664;</button>
+    <span class="kal-kuupealkiri">${KUUD[calM]} ${calY}</span>
+    <button class="kal-nav-btn" onclick="kalNav(1)" ${nextDis}>&#9654;</button>
+  </div><div class="kal-grid">`;
+
+  NP.forEach(p=>{ h+=`<div class="kal-ph">${p}</div>`; });
+  for(let i=0;i<dow;i++) h+=`<div class="kal-cell"></div>`;
+  for(let d=1;d<=last;d++){
+    const s=ds(calY,calM,d);
+    let cls="kal-cell ";
+    if(!inSeason(s)||s<today) cls+="kal-hall";
+    else if(isBlocked(s))    cls+="kal-broneeritud";
+    else                     cls+="kal-vaba";
+    if(s===today) cls+=" kal-taana";
+    h+=`<div class="${cls}">${d}</div>`;
+  }
+  h+="</div>";
+  el.innerHTML=h;
+}
+
+function kalNav(d){ calM+=d; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderKal(); }
+
+// Overlay
+function openOverlay(){
+  document.getElementById("overlay").classList.add("overlay--avatud");
+  document.body.classList.add("scroll-lukk");
+}
+
+function closeOverlay(){
+  document.getElementById("overlay").classList.remove("overlay--avatud");
+  document.body.classList.remove("scroll-lukk");
+}
+
+// Klahv Escape sulgeb overlay
+document.addEventListener("keydown", function(e){
+  if(e.key==="Escape") closeOverlay();
+});
+
+// Mobiilis: pühkimine alla sulgeb overlay
+(function(){
+  let ty=0;
+  const sisu = document.getElementById("overlay-sisu");
+  sisu.addEventListener("touchstart", function(e){ ty=e.touches[0].clientY; }, {passive:true});
+  sisu.addEventListener("touchend", function(e){
+    if(sisu.scrollTop===0 && e.changedTouches[0].clientY - ty > 80) closeOverlay();
+  }, {passive:true});
+})();
+
+document.addEventListener("DOMContentLoaded", function(){
+  // Kalender
+  const today = new Date();
+  if(SAADAVUS.season_start){
+    const ss=new Date(SAADAVUS.season_start);
+    if(today<ss){ calY=ss.getFullYear(); calM=ss.getMonth(); }
+    else        { calY=today.getFullYear(); calM=today.getMonth(); }
+  } else { calY=today.getFullYear(); calM=today.getMonth(); }
+  renderKal();
+
+  // Kui on viga, ava overlay kohe
+  {% if viga %}openOverlay();{% endif %}
+});
+</script>
 
 </body>
 </html>
