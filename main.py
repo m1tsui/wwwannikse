@@ -163,6 +163,7 @@ async def broneeri(request: Request):
     guest_email = form.get("guest_email", "").strip()
     guest_phone = form.get("guest_phone", "").strip()
     saun = form.get("saun") == "1"
+    guest_count = int(guest_count_str) if guest_count_str.isdigit() else None
 
     # Valideeri sisend
     viga = None
@@ -187,8 +188,36 @@ async def broneeri(request: Request):
             request, "et/majutus/vaike-maja.html", ctx, status_code=422
         )
 
-    # Saadavuse kontroll (vt annikse-broneerimine.md p 4)
+    # DB-põhised kontrollid — hooaeg ja külaliste arv
     db = get_db()
+    accom = db.execute(
+        "SELECT season_start, season_end, max_guests FROM accommodations WHERE id=?",
+        (accommodation_id,),
+    ).fetchone()
+
+    if accom and accom["season_start"]:
+        s_start, s_end = _hooaeg_aasta(accom["season_start"], accom["season_end"])
+        if saabub_str < s_start or lahkub_str > s_end:
+            db.close()
+            ctx = _vaike_maja_ctx()
+            ctx.update({"viga": "Valitud kuupäevad jäävad väljaspoole hooaega.", "form_data": dict(form)})
+            return templates.TemplateResponse(
+                request, "et/majutus/vaike-maja.html", ctx, status_code=422
+            )
+
+    if accom and accom["max_guests"] is not None:
+        if guest_count is None or guest_count < 1 or guest_count > accom["max_guests"]:
+            db.close()
+            ctx = _vaike_maja_ctx()
+            ctx.update({
+                "viga": f"Külaliste arv peab olema 1–{accom['max_guests']}.",
+                "form_data": dict(form),
+            })
+            return templates.TemplateResponse(
+                request, "et/majutus/vaike-maja.html", ctx, status_code=422
+            )
+
+    # Saadavuse kontroll (vt annikse-broneerimine.md p 4)
     conflict = db.execute(
         "SELECT 1 FROM bookings "
         "WHERE accommodation_id=? AND status IN ('ootel','kinnitatud','makstud') "
@@ -228,7 +257,6 @@ async def broneeri(request: Request):
                 saun_sendid = saun_rule["price_per_night"]
 
     total_price = majutus_sendid + saun_sendid
-    guest_count = int(guest_count_str) if guest_count_str.isdigit() else None
     token = secrets.token_urlsafe(8)
 
     cursor = db.execute(
