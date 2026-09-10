@@ -959,7 +959,7 @@
   /* Kalender */
   .kalender-plokk {
     margin: 28px 0 0;
-    max-width: 320px;
+    max-width: 420px;
   }
 
   .kalender-legend {
@@ -1000,7 +1000,7 @@
 
   .kal-kuupealkiri {
     font-family: var(--display);
-    font-size: 16px;
+    font-size: 19px;
     color: var(--pine);
   }
 
@@ -1030,12 +1030,12 @@
 
   .kal-ph {
     text-align: center;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--reed);
-    padding: 4px 0 6px;
+    padding: 4px 0 8px;
   }
 
   .kal-cell {
@@ -1043,7 +1043,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 15px;
     border-radius: 2px;
   }
 
