@@ -705,7 +705,6 @@
     display: flex;
     flex-direction: column;
     gap: 20px;
-    padding-top: 80px;
   }
 
   /* Vana grid (enam ei kasutata, jäetud ühilduvuse jaoks) */
