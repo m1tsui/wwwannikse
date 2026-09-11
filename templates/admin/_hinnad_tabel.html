@@ -1,0 +1,31 @@
+{% if hinnareeglid %}
+<table>
+  <thead>
+    <tr>
+      <th>Algus</th>
+      <th>Lõpp</th>
+      <th>Hind</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in hinnareeglid %}
+    <tr id="hinnareegel-{{ r.id }}">
+      <td>{{ r.date_from }}</td>
+      <td>{{ r.date_to }}</td>
+      <td>{{ r.price_per_night // 100 }} €</td>
+      <td>
+        <button class="nupp-kustuta"
+          hx-delete="/admin/hinnad/{{ r.id }}"
+          hx-target="#hinnad-tabel-konteiner"
+          hx-swap="innerHTML"
+          hx-vals='{"accommodation_id": "{{ aktiivne_id }}"}'
+          hx-confirm="Kustuta see hinnareegel?">Kustuta</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="tühi">Selle majutuse jaoks pole hinnareegleid.</div>
+{% endif %}

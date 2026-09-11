@@ -654,3 +654,107 @@ def admin_lukka_tagasi(b_id: int, _: None = Depends(verify_admin)):
     db.commit()
     db.close()
     return HTMLResponse(_broneering_rida_html(b_id))
+
+
+def _hinnad_tabel_ctx(accommodation_id: int) -> dict:
+    db = get_db()
+    hinnareeglid = db.execute(
+        "SELECT id, date_from, date_to, price_per_night FROM pricing_rules "
+        "WHERE accommodation_id=? ORDER BY date_from",
+        (accommodation_id,),
+    ).fetchall()
+    db.close()
+    return {
+        "hinnareeglid": [dict(r) for r in hinnareeglid],
+        "aktiivne_id": accommodation_id,
+    }
+
+
+@app.get("/admin")
+def admin_index(request: Request, _: None = Depends(verify_admin)):
+    return templates.TemplateResponse(request, "admin/index.html", {})
+
+
+@app.get("/admin/hinnad")
+def admin_hinnad(
+    request: Request,
+    accommodation_id: Optional[int] = None,
+    _: None = Depends(verify_admin),
+):
+    db = get_db()
+    majutused = db.execute(
+        "SELECT id, name_et FROM accommodations ORDER BY id"
+    ).fetchall()
+    db.close()
+    # Vaikimisi esimene kirje
+    if not accommodation_id and majutused:
+        accommodation_id = majutused[0]["id"]
+    ctx = {
+        "majutused": [dict(m) for m in majutused],
+        "aktiivne_id": accommodation_id,
+        **_hinnad_tabel_ctx(accommodation_id),
+    }
+    return templates.TemplateResponse(request, "admin/hinnad.html", ctx)
+
+
+@app.get("/admin/hinnad/tabel")
+def admin_hinnad_tabel(
+    request: Request,
+    accommodation_id: int,
+    _: None = Depends(verify_admin),
+):
+    ctx = _hinnad_tabel_ctx(accommodation_id)
+    return templates.TemplateResponse(request, "admin/_hinnad_tabel.html", ctx)
+
+
+@app.post("/admin/hinnad/lisa")
+async def admin_hinnad_lisa(
+    request: Request,
+    _: None = Depends(verify_admin),
+):
+    form = await request.form()
+    accommodation_id = int(form.get("accommodation_id", 0))
+    date_from = form.get("date_from", "").strip()
+    date_to = form.get("date_to", "").strip()
+    hind_euro = form.get("hind_euro", "").strip()
+
+    viga = None
+    try:
+        hind = float(hind_euro)
+        if hind < 0:
+            viga = "Hind peab olema 0 või suurem."
+    except (ValueError, TypeError):
+        viga = "Vigane hind."
+
+    if not viga and date_from > date_to:
+        viga = "Lõppkuupäev peab olema alguskuupäevast hiljem või sama."
+
+    if viga:
+        ctx = _hinnad_tabel_ctx(accommodation_id)
+        ctx["viga"] = viga
+        return templates.TemplateResponse(request, "admin/_hinnad_tabel.html", ctx)
+
+    hind_sendid = round(hind * 100)
+    db = get_db()
+    db.execute(
+        "INSERT INTO pricing_rules (accommodation_id, date_from, date_to, price_per_night) VALUES (?,?,?,?)",
+        (accommodation_id, date_from, date_to, hind_sendid),
+    )
+    db.commit()
+    db.close()
+    return templates.TemplateResponse(request, "admin/_hinnad_tabel.html", _hinnad_tabel_ctx(accommodation_id))
+
+
+@app.delete("/admin/hinnad/{rule_id}")
+async def admin_hinnad_kustuta(
+    request: Request,
+    rule_id: int,
+    _: None = Depends(verify_admin),
+):
+    form = await request.form()
+    accommodation_id = int(form.get("accommodation_id", 0))
+    db = get_db()
+    db.execute("DELETE FROM pricing_rules WHERE id=?", (rule_id,))
+    db.commit()
+    db.close()
+    return templates.TemplateResponse(request, "admin/_hinnad_tabel.html", _hinnad_tabel_ctx(accommodation_id))
