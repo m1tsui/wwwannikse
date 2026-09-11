@@ -723,7 +723,7 @@
   /* Vasak veerg: kalender. Parem veerg: tekst */
   .majutus-pilt-kirjeldus {
     display: grid;
-    grid-template-columns: 420px 580px;
+    grid-template-columns: 520px 700px;
     gap: 80px;
     justify-content: center;
     align-items: start;
