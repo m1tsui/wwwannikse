@@ -733,6 +733,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    margin-left: -200px;
   }
 
   .majutus-info {
@@ -1338,7 +1339,7 @@
     .majutus-pilt-kirjeldus {
       grid-template-columns: 1fr;
     }
-    .majutus-vasak { max-width: 400px; }
+    .majutus-vasak { max-width: 00px; }
   }
 
   /* Mobiilis overlay on täisekraaniline */
