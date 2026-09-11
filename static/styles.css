@@ -848,15 +848,15 @@
 
   .majutus-kirjeldus h3 {
     font-family: var(--display);
-    font-size: 18px;
+    font-size: 22px;
     color: var(--pine);
-    margin: 24px 0 8px;
+    margin: 28px 0 10px;
   }
 
   .majutus-kirjeldus p {
     color: var(--pine-dim);
-    font-size: 15px;
-    margin-bottom: 14px;
+    font-size: 18px;
+    margin-bottom: 16px;
   }
 
   /* ---------- BRONEERIMISVORM ---------- */
