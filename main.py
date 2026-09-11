@@ -171,6 +171,7 @@ def _vaike_maja_ctx() -> dict:
         "tekk_hind_euro": _lisateenus_hind_euro(db, "tekk", today_str),
         "viga": None,
         "form_data": {},
+        "saadavus": get_saadavuse_andmed(1),
     }
     db.close()
     return ctx
@@ -202,7 +203,6 @@ def inglise(request: Request):
 def vaike_maja(request: Request, viga: str = None):
     ctx = _vaike_maja_ctx()
     ctx["viga"] = viga
-    ctx["saadavus"] = get_saadavuse_andmed(1)
     return templates.TemplateResponse(request, "et/majutus/vaike-maja.html", ctx)
 
 
