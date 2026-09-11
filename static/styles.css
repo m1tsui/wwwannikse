@@ -856,7 +856,6 @@
   .majutus-kirjeldus p {
     color: var(--pine-dim);
     font-size: 15px;
-    max-width: 44ch;
     margin-bottom: 14px;
   }
 
