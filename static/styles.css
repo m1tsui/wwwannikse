@@ -634,7 +634,8 @@
     -webkit-backdrop-filter: blur(10px);
     padding: 0;
     border-bottom: 1px solid var(--line);
-    overflow: hidden;
+    position: relative;
+    overflow: visible;
   }
 
   .back-link {
@@ -649,6 +650,13 @@
 
   .back-link:hover { color: var(--pine); }
 
+  .subpage-back-link {
+    position: absolute;
+    top: 24px;
+    left: 340px;
+    margin-bottom: 0;
+  }
+
   .subpage-header h1 {
     font-size: clamp(28px, 4vw, 44px);
     margin-top: 10px;
@@ -656,38 +664,41 @@
 
   /* ---------- ALAMLEHT: PAIGUTUS ---------- */
 
-  /* Subpage header: pilt vasakul, sisu paremal */
-  .subpage-header-inner {
-    display: flex;
-    align-items: stretch;
-    gap: 48px;
-  }
-
+  /* Pilt sõltumatu — absoluutselt page-shell suhtes */
   .subpage-header-foto {
-    width: 240px;
-    flex-shrink: 0;
+    position: absolute;
+    left: 20px;
+    top: 0;
+    width: 300px;
+    height: 300px;
     overflow: hidden;
+    border-radius: 0 0 3px 3px;
+    z-index: 10;
+    box-shadow: 4px 8px 32px rgba(32,42,30,0.18);
   }
 
   .subpage-header-foto img {
     width: 100%;
     height: 100%;
-    min-height: 200px;
     object-fit: cover;
     display: block;
   }
 
-  /* Tekst + broneeri nupp — täidab ülejäänud laiuse */
+  /* Tekst tsentreeritud .wrap kaudu */
   .subpage-header-sisu {
-    flex: 1;
     display: flex;
     align-items: flex-end;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 48px 0 44px;
+    justify-content: center;
+    gap: 48px;
+    padding-top: 48px;
+    padding-bottom: 44px;
+    text-align: center;
   }
 
   .btn-broneeri-header {
+    position: absolute;
+    top: 24px;
+    right: 32px;
     font-family: var(--mono);
     font-size: 13px;
     letter-spacing: 0.06em;
@@ -699,7 +710,6 @@
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.2s;
-    flex-shrink: 0;
   }
 
   .btn-broneeri-header:hover { background: var(--pine-dim); }
@@ -713,7 +723,7 @@
   /* Vasak veerg: kalender. Parem veerg: tekst */
   .majutus-pilt-kirjeldus {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 400px 1fr;
     gap: 80px;
     align-items: start;
     margin-bottom: 40px;
@@ -1055,17 +1065,17 @@
   .kal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
+    gap: 4px;
   }
 
   .kal-ph {
     text-align: center;
-    font-size: 11px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: var(--reed);
-    padding: 4px 0 8px;
+    color: var(--pine-dim);
+    padding: 2px 0 10px;
   }
 
   .kal-cell {
@@ -1073,14 +1083,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: 16px;
     border-radius: 2px;
   }
 
   .kal-vaba {
     background: var(--paper);
     color: var(--pine);
-    border: 1px solid var(--line);
   }
 
   .kal-broneeritud {
@@ -1089,10 +1098,10 @@
     text-decoration: line-through;
   }
 
-  .kal-hall { color: rgba(32,42,30,0.25); }
+  .kal-hall { color: rgba(32,42,30,0.32); }
 
   .kal-taana {
-    outline: 2px solid var(--reed);
+    outline: 2px solid var(--rust);
     outline-offset: -2px;
     font-weight: 600;
   }
