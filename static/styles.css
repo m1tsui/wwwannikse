@@ -724,7 +724,7 @@
   .majutus-pilt-kirjeldus {
     display: grid;
     grid-template-columns: 1fr 1.5fr;
-    gap: 160px;
+    gap: 260px;
     align-items: start;
     margin-bottom: 40px;
   }
