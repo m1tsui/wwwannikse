@@ -210,7 +210,7 @@ def inglise(request: Request):
 
 
 @app.get("/ee/majutus/vaike-maja")
-def vaike_maja(request: Request, viga: str = None):
+def vaike_maja(request: Request, viga: Optional[str] = None):
     ctx = _vaike_maja_ctx()
     ctx["viga"] = viga
     return templates.TemplateResponse(request, "et/majutus/vaike-maja.html", ctx)
