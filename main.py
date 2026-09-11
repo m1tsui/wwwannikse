@@ -366,7 +366,10 @@ async def broneeri(request: Request):
                 request, "et/majutus/vaike-maja.html", ctx, status_code=422
             )
 
-    # Saadavuse kontroll
+    # Kirjutuslukustus — kaitseb race condition vastu (kaks klienti sama aeg)
+    db.execute("BEGIN IMMEDIATE")
+
+    # Saadavuse kontroll — lukustuse all, et SELECT ja INSERT oleksid aatomsed
     conflict = db.execute(
         "SELECT 1 FROM bookings "
         "WHERE accommodation_id=? AND status IN ('ootel','kinnitatud','makstud') "
@@ -374,6 +377,7 @@ async def broneeri(request: Request):
         (andmed.accommodation_id, lahkub_str, saabub_str),
     ).fetchone()
     if conflict:
+        db.rollback()
         db.close()
         ctx = _vaike_maja_ctx()
         form_dict = dict(form)
