@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS accommodations (
     max_guests           INTEGER,       -- NULL = pole vajalik (karavan, lisateenused)
     booking_com_ical_url TEXT,          -- NULL = pole Booking.com'is
     addon_group          TEXT,          -- ainult lisateenus-tüübil; sama grupp = teineteist välistavad (nt 'saun')
-    has_quantity         INTEGER NOT NULL DEFAULT 0  -- 1 = klient saab koguse valida (grillsüsi, tekk)
+    has_quantity         INTEGER NOT NULL DEFAULT 0, -- 1 = klient saab koguse valida (tekk)
+    max_quantity         INTEGER                     -- NULL = piiranguta; nt tekk=4
 );
 
 CREATE TABLE IF NOT EXISTS pricing_rules (
@@ -79,47 +80,48 @@ CREATE INDEX IF NOT EXISTS idx_blocked_accom_dates
 
 # Majutusüksused ja lisateenused.
 # Veerud: slug, name_et, name_en, type, season_start, season_end,
-#         max_guests, booking_com_ical_url, addon_group, has_quantity
+#         max_guests, booking_com_ical_url, addon_group, has_quantity, max_quantity
 ACCOMMODATIONS = [
     # --- majutus ---
     (
         "vaike-maja", "Väike maja rattail", "Väike maja rattail",
         "majutus", "04-01", "09-30", 4,
         "https://ical.booking.com/v1/export?t=8e953c0d-2411-4320-b573-10fa72f69fe4",
-        None, 0,
+        None, 0, None,
     ),
     (
         "telkimine", "Telkimine", "Telkimine",
         "majutus", "05-01", "08-31", 4,
-        None, None, 0,
+        None, None, 0, None,
     ),
     (
         "karavan", "Karavanauto", "Karavanauto",
         "majutus", "03-01", "10-31", None,
-        None, None, 0,
+        None, None, 0, None,
     ),
     # --- lisateenused ---
     # saun-grupp: teineteist välistavad (raadionupud)
     (
         "saun-ise-kutan", "Saun (klient kütab ise)", "Saun (klient kütab ise)",
         "lisateenus", None, None, None,
-        None, "saun", 0,
+        None, "saun", 0, None,
     ),
     (
         "saun-meie-kutame", "Saun (meie kütame)", "Saun (meie kütame)",
         "lisateenus", None, None, None,
-        None, "saun", 0,
+        None, "saun", 0, None,
     ),
-    # sõltumatud lisateenused (kogusega)
+    # grillsüsi: lihtne jah/ei (has_quantity=0), müüakse max 1 kliendile
     (
         "grillsysi", "Grillsüsi", "Grillsüsi",
         "lisateenus", None, None, None,
-        None, None, 1,
+        None, None, 0, None,
     ),
+    # tekk: koguse valik, max 4
     (
         "tekk", "Lisatekk", "Lisatekk",
         "lisateenus", None, None, None,
-        None, None, 1,
+        None, None, 1, 4,
     ),
 ]
 
@@ -147,8 +149,8 @@ def main():
     conn.executemany(
         """INSERT OR IGNORE INTO accommodations
            (slug, name_et, name_en, type, season_start, season_end,
-            max_guests, booking_com_ical_url, addon_group, has_quantity)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            max_guests, booking_com_ical_url, addon_group, has_quantity, max_quantity)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         ACCOMMODATIONS,
     )
 

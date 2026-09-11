@@ -48,20 +48,16 @@
 
 <main class="page-shell">
 
+  <div class="subpage-header-foto">
+    <img src="/static/images/putka.jpg" alt="Väike maja rattail õhtuvalguses">
+  </div>
+
   <div class="subpage-header">
-    <div class="wrap subpage-header-inner">
-      <div class="subpage-header-foto">
-        <img src="/static/images/putka.jpg" alt="Väike maja rattail õhtuvalguses">
-      </div>
-      <div class="subpage-header-sisu">
-        <div>
-          <a href="/ee#majutus" class="back-link">← Kõik majutused</a>
-          <div class="eyebrow">Omaette maja</div>
-          <h1>Väike maja rattail</h1>
-        </div>
-        <button class="btn-broneeri-header" onclick="openOverlay()">Broneeri →</button>
-      </div>
+    <a href="/ee#majutus" class="back-link subpage-back-link">← Kõik majutused</a>
+    <div class="wrap subpage-header-sisu">
+      <h1>Väike maja rattail</h1>
     </div>
+    <button class="btn-broneeri-header" onclick="openOverlay()">Broneeri →</button>
   </div>
 
   <section class="section">
@@ -73,11 +69,7 @@
           <!-- Vasak veerg: kalender -->
           <div class="majutus-vasak">
             <div class="kalender-plokk">
-              <div class="kalender-legend">
-                <span class="kal-legend-vaba">Vaba</span>
-                <span class="kal-legend-broneeritud">Broneeritud</span>
-              </div>
-              <div id="kalender"></div>
+<div id="kalender"></div>
             </div>
           </div>
 
@@ -93,7 +85,7 @@
             <div class="majutus-kirjeldus">
               <p>Omaette pisike maja Virtsu külje all, Puhtu looduskaitseala lähedal. Majas on voodi, elekter, pliit, nõud ja külmkapp. Terrassil on grillimise võimalus koos terrassimööbliga.</p>
 
-              <p>WC asub kõrvalmajakeses. Majal puudub veesüsteem — joogivesi ja toiduvalmistamiseks soovitame kasutada poest ostetud vett. Andke teada, kui vesi saab otsa.</p>
+              <p>WC asub kõrvalmajakeses. Majas on dušš. Joogiveeks soovitame kasutada pudelivett.</p>
 
               <h3>Ujumine</h3>
               <p>Lähedal on kaks head ujumiskohta Annikse lahe ääres — rahulik ja madal, sobib lastele ja täiskasvanutele.</p>
@@ -197,14 +189,15 @@
             </label>
           </div>
 
-          <label class="form-kogus">
-            <div class="form-kogus-label">
-              <span>Grillsüsi</span>
-              {% if grillsysi_hind_euro is not none %}<span class="hind-märge">{{ grillsysi_hind_euro }} €/kott</span>{% endif %}
-            </div>
-            <input type="number" name="grillsysi_kogus" min="0" value="{{ form_data.get('grillsysi_kogus', '0') }}"
+          <label class="form-saun-valik">
+            <input type="checkbox" name="grillsysi" value="on"
+                   {% if form_data.get('grillsysi') == 'on' %}checked{% endif %}
                    hx-post="/api/hind" hx-trigger="change"
                    hx-target="#hind-display" hx-include="closest form">
+            <span class="form-saun-tekst">
+              <span>Grillsüsi</span>
+              {% if grillsysi_hind_euro is not none %}<span class="hind-märge">{{ grillsysi_hind_euro }} €/kott</span>{% endif %}
+            </span>
           </label>
 
           <label class="form-kogus">
@@ -212,7 +205,7 @@
               <span>Lisatekk</span>
               <span class="hind-märge">tasuta</span>
             </div>
-            <input type="number" name="tekk_kogus" min="0" value="{{ form_data.get('tekk_kogus', '0') }}"
+            <input type="number" name="tekk_kogus" min="0" max="4" value="{{ form_data.get('tekk_kogus', '0') }}"
                    hx-post="/api/hind" hx-trigger="change"
                    hx-target="#hind-display" hx-include="closest form">
           </label>

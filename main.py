@@ -47,7 +47,7 @@ class BroneerimisVorm(BaseModel):
     guest_email: EmailStr
     guest_phone: str
     saun_valik: Optional[str] = None   # "ise" / "meie" / None
-    grillsysi_kogus: int = 0
+    grillsysi: bool = False
     tekk_kogus: int = 0
 
     @model_validator(mode="after")
@@ -74,9 +74,17 @@ class BroneerimisVorm(BaseModel):
             raise ValueError("Vigane sauna valik.")
         return v
 
-    @field_validator("grillsysi_kogus", "tekk_kogus", mode="before")
+    @field_validator("grillsysi", mode="before")
     @classmethod
-    def kogus_mitte_negatiivne(cls, v):
+    def normaliseri_grillsysi(cls, v):
+        # HTML checkbox saadab "on" kui märgitud, puudub kui märkimata
+        if v in ("on", "true", "1", True):
+            return True
+        return False
+
+    @field_validator("tekk_kogus", mode="before")
+    @classmethod
+    def tekk_kogus_vahemik(cls, v):
         if v is None or v == "":
             return 0
         try:
@@ -84,7 +92,9 @@ class BroneerimisVorm(BaseModel):
         except (ValueError, TypeError):
             return 0
         if v < 0:
-            raise ValueError("Kogus ei saa olla negatiivne.")
+            return 0
+        if v > 4:
+            raise ValueError("Lisatekke saab tellida kuni 4.")
         return v
 
 
@@ -213,7 +223,7 @@ async def arvuta_hind(request: Request):
     saabub_str = form.get("saabub", "").strip()
     lahkub_str = form.get("lahkub", "").strip()
     saun_valik = form.get("saun_valik", "").strip()
-    grillsysi_kogus = int(form.get("grillsysi_kogus", "0") or "0")
+    grillsysi = form.get("grillsysi", "") in ("on", "true", "1")
     tekk_kogus = int(form.get("tekk_kogus", "0") or "0")
     accommodation_id = int(form.get("accommodation_id", "1"))
 
@@ -268,8 +278,8 @@ async def arvuta_hind(request: Request):
             saun_sendid = h
             saun_label = "Saun (meie kütame)"
 
-    grillsysi_unit = slug_hind("grillsysi") if grillsysi_kogus > 0 else None
-    grillsysi_sendid = (grillsysi_unit * grillsysi_kogus) if grillsysi_unit else 0
+    grillsysi_unit = slug_hind("grillsysi") if grillsysi else None
+    grillsysi_sendid = grillsysi_unit if grillsysi_unit else 0
 
     tekk_unit = slug_hind("tekk") if tekk_kogus > 0 else None
     tekk_sendid = (tekk_unit * tekk_kogus) if tekk_unit else 0
@@ -289,7 +299,7 @@ async def arvuta_hind(request: Request):
     if saun_sendid and saun_label:
         html += f'<div class="hind-rida"><span>{saun_label}</span><span>{e(saun_sendid)}</span></div>'
     if grillsysi_sendid:
-        html += f'<div class="hind-rida"><span>Grillsüsi × {grillsysi_kogus}</span><span>{e(grillsysi_sendid)}</span></div>'
+        html += f'<div class="hind-rida"><span>Grillsüsi</span><span>{e(grillsysi_sendid)}</span></div>'
     if tekk_sendid:
         html += f'<div class="hind-rida"><span>Lisatekk × {tekk_kogus}</span><span>{e(tekk_sendid)}</span></div>'
     html += f'<div class="hind-kokku"><span>Kokku</span><span>{e(kokku)}</span></div></div>'
@@ -310,7 +320,7 @@ async def broneeri(request: Request):
         "guest_email": form.get("guest_email", ""),
         "guest_phone": form.get("guest_phone", ""),
         "saun_valik": form.get("saun_valik", ""),
-        "grillsysi_kogus": form.get("grillsysi_kogus", "0"),
+        "grillsysi": form.get("grillsysi", ""),
         "tekk_kogus": form.get("tekk_kogus", "0"),
     }
     try:
@@ -403,11 +413,11 @@ async def broneeri(request: Request):
             addon_kirjed.append((r["id"], 1, r["price_per_night"]))
             kokku_lisad += r["price_per_night"]
 
-    if andmed.grillsysi_kogus > 0:
+    if andmed.grillsysi:
         r = addon_row("grillsysi")
         if r:
-            addon_kirjed.append((r["id"], andmed.grillsysi_kogus, r["price_per_night"]))
-            kokku_lisad += r["price_per_night"] * andmed.grillsysi_kogus
+            addon_kirjed.append((r["id"], 1, r["price_per_night"]))
+            kokku_lisad += r["price_per_night"]
 
     if andmed.tekk_kogus > 0:
         r = addon_row("tekk")
