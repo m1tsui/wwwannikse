@@ -632,8 +632,9 @@
     background: rgba(245, 242, 235, 0.94);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    padding: 48px 0 44px;
+    padding: 0;
     border-bottom: 1px solid var(--line);
+    overflow: hidden;
   }
 
   .back-link {
@@ -655,12 +656,35 @@
 
   /* ---------- ALAMLEHT: PAIGUTUS ---------- */
 
-  /* Subpage header: pealkiri + broneeri nupp kõrvuti */
+  /* Subpage header: pilt vasakul, sisu paremal */
   .subpage-header-inner {
+    display: flex;
+    align-items: stretch;
+    gap: 48px;
+  }
+
+  .subpage-header-foto {
+    width: 240px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  .subpage-header-foto img {
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Tekst + broneeri nupp — täidab ülejäänud laiuse */
+  .subpage-header-sisu {
+    flex: 1;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 24px;
+    padding: 48px 0 44px;
   }
 
   .btn-broneeri-header {
@@ -686,11 +710,11 @@
     margin: 0 auto;
   }
 
-  /* Vasak veerg: pilt + kalender. Parem veerg: tekst */
+  /* Vasak veerg: kalender. Parem veerg: tekst */
   .majutus-pilt-kirjeldus {
     display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 160px;
+    grid-template-columns: 300px 1fr;
+    gap: 80px;
     align-items: start;
     margin-bottom: 40px;
   }
@@ -1272,10 +1296,13 @@
     .form-card { position: static; }
     .taname-kast { padding: 32px 24px; }
 
-    /* Subpage header: nupp tuleb pealkirja alla */
-    .subpage-header-inner {
+    /* Subpage header mobiilis: pilt peidetud, tekst + nupp vertikaalselt */
+    .subpage-header-foto { display: none; }
+    .subpage-header-sisu {
+      width: 100%;
       flex-direction: column;
       align-items: flex-start;
+      gap: 20px;
     }
     .btn-broneeri-header { width: 100%; text-align: center; }
 
