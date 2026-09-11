@@ -172,9 +172,11 @@ def _vaike_maja_ctx() -> dict:
     db = get_db()
     season_start, season_end = _hooaeg_aasta("04-01", "09-30")
     today_str = date.today().isoformat()
+    min_date = max(today_str, season_start)  # ei luba mineviku ega väljaspool hooaja kuupäevi
     ctx = {
         "season_start": season_start,
         "season_end": season_end,
+        "min_date": min_date,
         "saun_ise_hind_euro": _lisateenus_hind_euro(db, "saun-ise-kutan", today_str),
         "saun_meie_hind_euro": _lisateenus_hind_euro(db, "saun-meie-kutame", today_str),
         "grillsysi_hind_euro": _lisateenus_hind_euro(db, "grillsysi", today_str),
@@ -336,6 +338,17 @@ async def broneeri(request: Request):
 
     saabub_str = andmed.saabub.isoformat()
     lahkub_str = andmed.lahkub.isoformat()
+
+    # Mineviku kuupäevade kontroll
+    if andmed.saabub < date.today():
+        ctx = _vaike_maja_ctx()
+        form_dict = dict(form)
+        form_dict["saabub"] = ""
+        form_dict["lahkub"] = ""
+        ctx.update({"viga": "Saabumise kuupäev ei saa olla minevikus.", "form_data": form_dict})
+        return templates.TemplateResponse(
+            request, "et/majutus/vaike-maja.html", ctx, status_code=422
+        )
 
     # DB-põhised kontrollid — hooaeg ja külaliste arv
     db = get_db()

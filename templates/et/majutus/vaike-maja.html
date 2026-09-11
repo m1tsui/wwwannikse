@@ -132,7 +132,7 @@
             <div>
               <div class="form-sublabel">Saabun</div>
               <input type="date" name="saabub" required
-                     min="{{ season_start }}" max="{{ season_end }}"
+                     min="{{ min_date }}" max="{{ season_end }}"
                      value="{{ form_data.get('saabub', '') }}"
                      hx-post="/api/hind" hx-trigger="change"
                      hx-target="#hind-display" hx-include="closest form">
@@ -140,7 +140,7 @@
             <div>
               <div class="form-sublabel">Lahkun</div>
               <input type="date" name="lahkub" required
-                     min="{{ season_start }}" max="{{ season_end }}"
+                     min="{{ min_date }}" max="{{ season_end }}"
                      value="{{ form_data.get('lahkub', '') }}"
                      hx-post="/api/hind" hx-trigger="change"
                      hx-target="#hind-display" hx-include="closest form">
