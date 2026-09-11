@@ -575,3 +575,82 @@ def admin_broneeringud(
 ):
     ctx = _admin_broneeringud_ctx(accommodation_id)
     return templates.TemplateResponse(request, "admin/broneeringud.html", ctx)
+
+
+def _broneering_rida_html(b_id: int) -> str:
+    """Tagastab ühe broneeringu rea HTML-i HTMX asenduse jaoks."""
+    db = get_db()
+    b = db.execute(
+        "SELECT b.*, a.name_et AS majutus_nimi FROM bookings b "
+        "JOIN accommodations a ON a.id=b.accommodation_id WHERE b.id=?",
+        (b_id,),
+    ).fetchone()
+    addons = db.execute(
+        "SELECT a.name_et AS nimi, ba.quantity AS kogus, ba.unit_price AS hind "
+        "FROM booking_addons ba "
+        "JOIN accommodations a ON a.id=ba.accommodation_id "
+        "WHERE ba.booking_id=?",
+        (b_id,),
+    ).fetchall()
+    db.close()
+
+    lisateenused_html = ""
+    if addons:
+        for lt in addons:
+            kogus = f" × {lt['kogus']}" if lt["kogus"] > 1 else ""
+            lisateenused_html += f"<div>{lt['nimi']}{kogus} — {lt['hind'] // 100} €</div>"
+    else:
+        lisateenused_html = '<span style="color:#bbb">—</span>'
+
+    staatus_map = {
+        "ootel": "staatus-ootel",
+        "kinnitatud": "staatus-kinnitatud",
+        "makstud": "staatus-makstud",
+        "tagasi_lükatud": "staatus-tagasi_lükatud",
+    }
+    staatus_cls = staatus_map.get(b["status"], "")
+
+    nupud_html = ""
+    if b["status"] == "ootel":
+        nupud_html = f"""
+        <div class="nupud">
+          <button class="nupp-kinnita"
+            hx-post="/admin/broneeringud/{b_id}/kinnita"
+            hx-target="#broneering-{b_id}"
+            hx-swap="outerHTML">Kinnita</button>
+          <button class="nupp-lukka"
+            hx-post="/admin/broneeringud/{b_id}/lukka-tagasi"
+            hx-target="#broneering-{b_id}"
+            hx-swap="outerHTML">Lükka tagasi</button>
+        </div>"""
+
+    guest_count_html = f"<br><small>{b['guest_count']} külalist</small>" if b["guest_count"] else ""
+
+    return f"""<tr id="broneering-{b_id}">
+      <td>{b["id"]}</td>
+      <td>{b["majutus_nimi"]}</td>
+      <td>{b["start_date"]} — {b["end_date"]}{guest_count_html}</td>
+      <td>{b["guest_name"]}<br><small>{b["guest_email"]}</small><br><small>{b["guest_phone"]}</small></td>
+      <td><span class="staatus {staatus_cls}">{b["status"]}</span></td>
+      <td>{b["total_price"] // 100} €</td>
+      <td class="lisateenused">{lisateenused_html}</td>
+      <td>{nupud_html}</td>
+    </tr>"""
+
+
+@app.post("/admin/broneeringud/{b_id}/kinnita")
+def admin_kinnita(b_id: int, _: None = Depends(verify_admin)):
+    db = get_db()
+    db.execute("UPDATE bookings SET status='kinnitatud' WHERE id=?", (b_id,))
+    db.commit()
+    db.close()
+    return HTMLResponse(_broneering_rida_html(b_id))
+
+
+@app.post("/admin/broneeringud/{b_id}/lukka-tagasi")
+def admin_lukka_tagasi(b_id: int, _: None = Depends(verify_admin)):
+    db = get_db()
+    db.execute("UPDATE bookings SET status='tagasi_lükatud' WHERE id=?", (b_id,))
+    db.commit()
+    db.close()
+    return HTMLResponse(_broneering_rida_html(b_id))
