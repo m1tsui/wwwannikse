@@ -1,7 +1,7 @@
 import os
 import secrets
 import sqlite3
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -164,6 +164,15 @@ def get_saadavuse_andmed(accommodation_id: int) -> dict:
         (accommodation_id,),
     ).fetchall()
 
+    # Hinnad hooaja kõigi päevade jaoks — üks päring, kõik reeglid
+    # Kitsam reegel (hilisem date_from) võidab laiema automaatselt
+    pricing_rows = db.execute(
+        "SELECT date_from, date_to, price_per_night FROM pricing_rules "
+        "WHERE accommodation_id=? ORDER BY date_from DESC",
+        (accommodation_id,),
+    ).fetchall()
+    pricing_rules = [dict(r) for r in pricing_rows]
+
     db.close()
 
     blocked = [
@@ -172,11 +181,25 @@ def get_saadavuse_andmed(accommodation_id: int) -> dict:
         {"from": r["date_from"], "to": r["date_to"]} for r in ical_rows
     ]
 
+    # Leia iga hooajapäeva hind
+    hinnad = {}
+    if season_start and season_end:
+        cur = date.fromisoformat(season_start)
+        end = date.fromisoformat(season_end)
+        while cur <= end:
+            s = cur.isoformat()
+            for rule in pricing_rules:
+                if rule["date_from"] <= s <= rule["date_to"]:
+                    hinnad[s] = rule["price_per_night"]
+                    break
+            cur += timedelta(days=1)
+
     return {
         "season_start": season_start,
         "season_end": season_end,
         "max_guests": max_guests,
         "blocked": blocked,
+        "hinnad": hinnad,
     }
 
 

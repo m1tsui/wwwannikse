@@ -339,11 +339,15 @@ function renderKal(){
   for(let d=1;d<=last;d++){
     const s=ds(calY,calM,d);
     let cls="kal-cell ";
+    let vaba=false;
     if(!inSeason(s)||s<today) cls+="kal-hall";
-    else if(isBlocked(s))    cls+="kal-broneeritud";
-    else                     cls+="kal-vaba";
+    else if(isBlocked(s))     cls+="kal-broneeritud";
+    else                      { cls+="kal-vaba"; vaba=true; }
     if(s===today) cls+=" kal-taana";
-    h+=`<div class="${cls}">${d}</div>`;
+    const hind=vaba&&SAADAVUS.hinnad&&SAADAVUS.hinnad[s]!=null
+      ? `<span class="kal-hind">${SAADAVUS.hinnad[s]/100}€</span>`
+      : `<span class="kal-hind"></span>`;
+    h+=`<div class="${cls}"><span class="kal-datum">${d}</span>${hind}</div>`;
   }
   h+="</div>";
   el.innerHTML=h;

@@ -1081,20 +1081,39 @@
   .kal-cell {
     aspect-ratio: 1;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: stretch;
     border-radius: 2px;
+    padding: 5px 5px 4px;
+  }
+
+  .kal-datum {
+    font-size: 12px;
+    line-height: 1;
+    text-align: left;
+  }
+
+  .kal-hind {
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1;
+    color: var(--pine);
   }
 
   .kal-vaba {
     background: var(--paper);
     color: var(--pine);
+    border: 1px solid var(--line);
   }
 
   .kal-broneeritud {
     background: var(--bg-alt);
     color: var(--reed);
+  }
+
+  .kal-broneeritud .kal-datum {
     text-decoration: line-through;
   }
 
