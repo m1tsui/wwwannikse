@@ -1,12 +1,16 @@
+import logging
 import os
 import secrets
 import sqlite3
+import time
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Optional
 
+import requests
+
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
@@ -47,6 +51,33 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(_http_basic)):
             detail="Vale kasutajanimi või parool",
             headers={"WWW-Authenticate": "Basic"},
         )
+
+
+NTFY_URL = "https://ntfy.sh/annikse-broneeringud-x7k2m9"
+_LOG_PATH = Path(__file__).parent / "ntfy_ebaonnestunud.log"
+
+
+def saada_ntfy_teade(sonum: str, broneering_id: int) -> None:
+    """Saadab push-teavituse Ntfy kaudu. Proovib 3 korda, logib ebaõnnestumise."""
+    headers = {"Click": "https://annikse.oruvilla.ee/admin/broneeringud"}
+    for katse in range(3):
+        try:
+            r = requests.post(NTFY_URL, data=sonum.encode("utf-8"), headers=headers, timeout=5)
+            if r.status_code < 300:
+                return
+        except Exception:
+            pass
+        if katse < 2:
+            time.sleep(2)
+
+    # Kõik 3 katset ebaõnnestusid — logi faili
+    from datetime import datetime
+    rida = f"{datetime.now().isoformat()} | broneering_id={broneering_id} | {sonum}\n"
+    try:
+        with open(_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(rida)
+    except Exception:
+        pass  # Logimise ebaõnnestumine ei tohi midagi katki teha
 
 
 def _hooaeg_aasta(mmdd_start: str, mmdd_end: str) -> tuple[str, str]:
@@ -357,7 +388,7 @@ async def arvuta_hind(request: Request):
 
 
 @app.post("/ee/broneeri")
-async def broneeri(request: Request):
+async def broneeri(request: Request, background_tasks: BackgroundTasks):
     form = await request.form()
 
     # Pydantic valideerimine — andmete kuju ja formaadid
@@ -401,7 +432,7 @@ async def broneeri(request: Request):
     # DB-põhised kontrollid — hooaeg ja külaliste arv
     db = get_db()
     accom = db.execute(
-        "SELECT season_start, season_end, max_guests FROM accommodations WHERE id=?",
+        "SELECT name_et, season_start, season_end, max_guests FROM accommodations WHERE id=?",
         (andmed.accommodation_id,),
     ).fetchone()
 
@@ -513,6 +544,15 @@ async def broneeri(request: Request):
         )
     db.commit()
     db.close()
+
+    majutus_nimi = accom["name_et"] if accom else "Majutus"
+    ntfy_sonum = (
+        f"Uus päring: {majutus_nimi}, "
+        f"{saabub_str} – {lahkub_str}, "
+        f"{andmed.guest_name}, "
+        f"{total_price // 100}€"
+    )
+    background_tasks.add_task(saada_ntfy_teade, ntfy_sonum, booking_id)
 
     return RedirectResponse(f"/ee/broneering/{token}", status_code=303)
 
