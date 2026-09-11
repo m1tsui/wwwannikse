@@ -2,6 +2,9 @@
 __pycache__/
 *.pyc
 
+# Admin paroolid — EI TOHI kunagi Git'i minna
+.env
+
 # Andmebaas — sisaldab päris andmeid, ei kuulu versioonihaldusse
 *.db
 

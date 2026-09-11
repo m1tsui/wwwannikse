@@ -1,14 +1,19 @@
+import os
 import secrets
 import sqlite3
 from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, Request
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr, ValidationError, field_validator, model_validator
+
+load_dotenv()
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -22,6 +27,26 @@ def get_db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+# ---------------------------------------------------------------------------
+# Admin autentimine — HTTP Basic Auth
+# ---------------------------------------------------------------------------
+
+_http_basic = HTTPBasic()
+
+
+def verify_admin(credentials: HTTPBasicCredentials = Depends(_http_basic)):
+    correct_user = os.environ.get("ADMIN_USERNAME", "")
+    correct_pass = os.environ.get("ADMIN_PASSWORD", "")
+    user_ok = secrets.compare_digest(credentials.username.encode(), correct_user.encode())
+    pass_ok = secrets.compare_digest(credentials.password.encode(), correct_pass.encode())
+    if not (user_ok and pass_ok):
+        raise HTTPException(
+            status_code=401,
+            detail="Vale kasutajanimi või parool",
+            headers={"WWW-Authenticate": "Basic"},
+        )
 
 
 def _hooaeg_aasta(mmdd_start: str, mmdd_end: str) -> tuple[str, str]:
@@ -482,3 +507,9 @@ def broneering_kinnitus(request: Request, token: str):
     if not b:
         return RedirectResponse("/ee", status_code=303)
     return templates.TemplateResponse(request, "et/taname.html", {"b": b})
+
+
+# AJUTINE — kustuta pärast testimist
+@app.get("/admin/test")
+def admin_test(request: Request, _: None = Depends(verify_admin)):
+    return HTMLResponse("<h1>Admin auth töötab!</h1>")
