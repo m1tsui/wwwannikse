@@ -1,0 +1,102 @@
+<title>Admin — Broneeringud</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; font-size: 14px; color: #1a1a1a; background: #f5f5f5; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  nav { margin-bottom: 24px; }
+  nav a { color: #2d6a4f; text-decoration: none; font-weight: 600; margin-right: 16px; }
+  nav a:hover { text-decoration: underline; }
+  .filter { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter a { padding: 6px 14px; border-radius: 4px; background: #fff; border: 1px solid #ccc; text-decoration: none; color: #333; font-size: 13px; }
+  .filter a.aktiivne { background: #2d6a4f; color: #fff; border-color: #2d6a4f; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  th { background: #2d6a4f; color: #fff; text-align: left; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+  .staatus { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 12px; font-weight: 600; }
+  .staatus-ootel { background: #fff3cd; color: #856404; }
+  .staatus-kinnitatud { background: #d1e7dd; color: #0a3622; }
+  .staatus-makstud { background: #cfe2ff; color: #084298; }
+  .staatus-tagasi_lükatud { background: #f8d7da; color: #58151c; }
+  .nupud { display: flex; gap: 6px; margin-top: 6px; }
+  .nupp-kinnita { padding: 5px 12px; background: #2d6a4f; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+  .nupp-lukka { padding: 5px 12px; background: #dc3545; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; }
+  .nupp-kinnita:hover { background: #1e4d38; }
+  .nupp-lukka:hover { background: #b02a37; }
+  .lisateenused { font-size: 12px; color: #555; margin-top: 4px; }
+  .tühi { padding: 32px; text-align: center; color: #888; }
+</style>
+
+<nav>
+  <a href="/admin">← Admin</a>
+  <a href="/admin/broneeringud">Broneeringud</a>
+  <a href="/admin/hinnad">Hinnad</a>
+</nav>
+
+<h1>Broneeringud</h1>
+<p style="color:#666; margin:0 0 20px;">{{ broneeringuid }} kirjet</p>
+
+<div class="filter">
+  <a href="/admin/broneeringud" class="{% if not aktiivne_id %}aktiivne{% endif %}">Kõik</a>
+  {% for a in majutused %}
+  <a href="/admin/broneeringud?accommodation_id={{ a.id }}"
+     class="{% if aktiivne_id == a.id %}aktiivne{% endif %}">{{ a.name_et }}</a>
+  {% endfor %}
+</div>
+
+{% if broneeringud %}
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Majutus</th>
+      <th>Kuupäevad</th>
+      <th>Külaline</th>
+      <th>Staatus</th>
+      <th>Koguhind</th>
+      <th>Lisateenused</th>
+      <th>Tegevus</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in broneeringud %}
+    <tr id="broneering-{{ b.id }}">
+      <td>{{ b.id }}</td>
+      <td>{{ b.majutus_nimi }}</td>
+      <td>{{ b.start_date }} — {{ b.end_date }}{% if b.guest_count %}<br><small>{{ b.guest_count }} külalist</small>{% endif %}</td>
+      <td>{{ b.guest_name }}<br><small>{{ b.guest_email }}</small><br><small>{{ b.guest_phone }}</small></td>
+      <td><span class="staatus staatus-{{ b.status }}">{{ b.status }}</span></td>
+      <td>{{ b.total_price // 100 }} €</td>
+      <td class="lisateenused">
+        {% if b.lisateenused %}
+          {% for lt in b.lisateenused %}
+            <div>{{ lt.nimi }}{% if lt.kogus > 1 %} × {{ lt.kogus }}{% endif %} — {{ lt.hind // 100 }} €</div>
+          {% endfor %}
+        {% else %}
+          <span style="color:#bbb">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if b.status == 'ootel' %}
+        <div class="nupud">
+          <button class="nupp-kinnita"
+            hx-post="/admin/broneeringud/{{ b.id }}/kinnita"
+            hx-target="#broneering-{{ b.id }}"
+            hx-swap="outerHTML">Kinnita</button>
+          <button class="nupp-lukka"
+            hx-post="/admin/broneeringud/{{ b.id }}/lukka-tagasi"
+            hx-target="#broneering-{{ b.id }}"
+            hx-swap="outerHTML">Lükka tagasi</button>
+        </div>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="tühi">Broneeringuid ei leitud.</div>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.4/htmx.min.js"></script>

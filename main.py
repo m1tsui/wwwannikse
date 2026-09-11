@@ -509,7 +509,69 @@ def broneering_kinnitus(request: Request, token: str):
     return templates.TemplateResponse(request, "et/taname.html", {"b": b})
 
 
-# AJUTINE — kustuta pärast testimist
-@app.get("/admin/test")
-def admin_test(request: Request, _: None = Depends(verify_admin)):
-    return HTMLResponse("<h1>Admin auth töötab!</h1>")
+# ---------------------------------------------------------------------------
+# Admin-vaated
+# ---------------------------------------------------------------------------
+
+def _admin_broneeringud_ctx(accommodation_id: Optional[int]) -> dict:
+    """Laeb broneeringute nimekirja koos lisateenustega."""
+    db = get_db()
+
+    majutused = db.execute(
+        "SELECT id, name_et FROM accommodations WHERE type='majutus' ORDER BY id"
+    ).fetchall()
+
+    if accommodation_id:
+        broneeringud_rows = db.execute(
+            "SELECT b.*, a.name_et AS majutus_nimi FROM bookings b "
+            "JOIN accommodations a ON a.id=b.accommodation_id "
+            "WHERE b.accommodation_id=? ORDER BY b.created_at DESC",
+            (accommodation_id,),
+        ).fetchall()
+    else:
+        broneeringud_rows = db.execute(
+            "SELECT b.*, a.name_et AS majutus_nimi FROM bookings b "
+            "JOIN accommodations a ON a.id=b.accommodation_id "
+            "ORDER BY b.created_at DESC"
+        ).fetchall()
+
+    broneeringud = []
+    for b in broneeringud_rows:
+        addons = db.execute(
+            "SELECT a.name_et AS nimi, ba.quantity AS kogus, ba.unit_price AS hind "
+            "FROM booking_addons ba "
+            "JOIN accommodations a ON a.id=ba.accommodation_id "
+            "WHERE ba.booking_id=?",
+            (b["id"],),
+        ).fetchall()
+        broneeringud.append({
+            "id": b["id"],
+            "majutus_nimi": b["majutus_nimi"],
+            "start_date": b["start_date"],
+            "end_date": b["end_date"],
+            "guest_count": b["guest_count"],
+            "guest_name": b["guest_name"],
+            "guest_email": b["guest_email"],
+            "guest_phone": b["guest_phone"],
+            "status": b["status"],
+            "total_price": b["total_price"],
+            "lisateenused": [dict(a) for a in addons],
+        })
+
+    db.close()
+    return {
+        "majutused": [dict(m) for m in majutused],
+        "broneeringud": broneeringud,
+        "broneeringuid": len(broneeringud),
+        "aktiivne_id": accommodation_id,
+    }
+
+
+@app.get("/admin/broneeringud")
+def admin_broneeringud(
+    request: Request,
+    accommodation_id: Optional[int] = None,
+    _: None = Depends(verify_admin),
+):
+    ctx = _admin_broneeringud_ctx(accommodation_id)
+    return templates.TemplateResponse(request, "admin/broneeringud.html", ctx)
